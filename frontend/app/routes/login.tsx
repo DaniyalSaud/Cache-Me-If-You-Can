@@ -46,9 +46,11 @@ export default function Login() {
     // Simulate API call
     setTimeout(() => {
       console.log("Login attempt:", { email, password });
+      // Set authentication flag in localStorage
+      localStorage.setItem('isAuthenticated', 'true');
       setIsLoading(false);
-      // Show success message
-      alert("Login successful! (This is a demo - no backend)");
+      // Redirect to marketplace
+      window.location.href = '/marketplace';
     }, 1500);
   };
 
