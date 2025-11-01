@@ -4,8 +4,8 @@ import { useState } from "react";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Login - FarmMarket" },
-    { name: "description", content: "Login to your FarmMarket account" },
+    { title: "Login - FreshHarvest" },
+    { name: "description", content: "Login to your FreshHarvest account" },
   ];
 }
 
@@ -43,35 +43,61 @@ export default function Login() {
     }
 
     setIsLoading(true);
-    // Simulate API call
+    // Simulate API call - Check demo credentials
     setTimeout(() => {
       console.log("Login attempt:", { email, password });
-      // Set authentication flag in localStorage
-      localStorage.setItem('isAuthenticated', 'true');
-      setIsLoading(false);
-      // Redirect to marketplace
-      window.location.href = '/marketplace';
+      
+      // Check if it's the demo account or just accept any valid credentials
+      const isDemoAccount = email === "farmer@freshharvest.com" && password === "Fresh@123";
+      
+      if (isDemoAccount || (email && password.length >= 6)) {
+        // Set authentication flag in localStorage
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userEmail', email);
+        setIsLoading(false);
+        // Redirect to marketplace
+        window.location.href = '/marketplace';
+      } else {
+        setIsLoading(false);
+        setErrors({ email: "Invalid email or password" });
+      }
     }, 1500);
   };
 
   return (
-    <div className="min-h-screen bg-mint-50 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-background-50 flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
         {/* Logo and Back Link */}
         <div className="text-center mb-8">
           <Link 
             to="/" 
-            className="inline-flex items-center gap-2 text-mint-700 hover:text-mint-800 text-lg mb-6 transition-colors font-semibold"
+            className="inline-flex items-center gap-2 text-primary-700 hover:text-primary-800 text-sm mb-4 transition-colors font-medium"
           >
-            <span className="text-2xl">←</span>
+            <span className="text-lg">←</span>
             <span>Back to Home</span>
           </Link>
-          <Link to="/" className="flex items-center justify-center gap-3 mb-4 hover:opacity-80 transition-opacity">
-            <div className="text-5xl">🌾</div>
-            <h1 className="text-4xl font-bold text-mint-700">FarmMarket</h1>
+          <Link to="/" className="flex items-center justify-center gap-3 mb-3 hover:opacity-90 transition-opacity">
+            <div className="flex items-center gap-2 text-3xl">
+              <span>�</span>
+              <span>🌽</span>
+              <span>🥕</span>
+            </div>
+            <h1 className="text-3xl font-bold text-primary-700">FreshHarvest</h1>
           </Link>
-          <h2 className="text-3xl font-bold text-earth-900 mb-2">Welcome Back!</h2>
-          <p className="text-lg text-earth-700">Login to access your account</p>
+          <h2 className="text-2xl font-bold text-text-900 mb-2">Welcome Back!</h2>
+          <p className="text-sm text-text-600">Login to access your account</p>
+        </div>
+
+        {/* Demo Credentials Info */}
+        <div className="card bg-accent-50 border-accent-300 mb-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">💡</span>
+            <div className="text-sm">
+              <p className="font-semibold text-text-900 mb-2">Demo Credentials:</p>
+              <p className="text-text-700"><span className="font-semibold">Email:</span> farmer@freshharvest.com</p>
+              <p className="text-text-700"><span className="font-semibold">Password:</span> Fresh@123</p>
+            </div>
+          </div>
         </div>
 
         {/* Login Card */}

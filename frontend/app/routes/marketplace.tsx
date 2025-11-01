@@ -162,7 +162,7 @@ export default function Marketplace() {
       {
         id: "okra",
         name: "Tender Okra",
-        emoji: "�",
+        emoji: "🫑",
         description: "Slender pods with minimal seeds ideal for frying and stews.",
         price: "₹75",
         unit: "per kg",
@@ -195,6 +195,11 @@ export default function Marketplace() {
   // Filter produce based on search and category
   const filteredProduce = useMemo(() => {
     let filtered = produce;
+
+    // When showing best sellers separately, exclude them from the main grid
+    if (!searchQuery && selectedCategory === "All Produce") {
+      filtered = filtered.filter((item) => !item.isBestSeller);
+    }
 
     // Filter by category
     if (selectedCategory !== "All Produce") {
@@ -288,6 +293,32 @@ export default function Marketplace() {
             Discover seasonal produce, transparent pricing, and reliable sourcing information. Every listing is verified to maintain the FreshHarvest quality promise.
           </p>
         </header>
+
+        {/* Category Filter */}
+        <div className="card bg-white shadow-lg">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-text-900">Browse by Category</h2>
+              <p className="text-sm text-text-600">Filter produce to match your inventory needs.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setSelectedCategory(category)}
+                  className={`btn-outline px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all ${
+                    category === selectedCategory
+                      ? "bg-primary-50 text-primary-700 border-primary-700"
+                      : ""
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
 
         {/* Search Bar */}
         <div className="card bg-white shadow-lg">
@@ -402,32 +433,6 @@ export default function Marketplace() {
             </div>
           </div>
         )}
-
-        {/* Category Filter */}
-        <div className="card bg-white shadow-lg">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-text-900">Browse by Category</h2>
-              <p className="text-sm text-text-600">Filter produce to match your inventory needs.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => setSelectedCategory(category)}
-                  className={`btn-outline px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all ${
-                    category === selectedCategory
-                      ? "bg-primary-50 text-primary-700 border-primary-700"
-                      : ""
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
 
         {/* All Produce Grid */}
         <div>

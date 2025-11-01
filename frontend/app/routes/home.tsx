@@ -25,7 +25,7 @@ export default function Home() {
           <div className="flex items-center justify-between py-4">
             <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
               <div className="flex items-center gap-1 text-3xl">
-                <span>�</span>
+                <span>🍎</span>
                 <span>🌽</span>
                 <span>🥕</span>
               </div>
@@ -255,7 +255,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">�</span>
+                <span className="text-2xl">🍎</span>
                 <span className="text-xl font-bold text-primary-700">FreshHarvest</span>
               </div>
               <p className="text-sm text-text-600">
