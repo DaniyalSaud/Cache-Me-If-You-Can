@@ -4,51 +4,138 @@ import { User } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { CropWaste } from "../models/cropwaste.models.js";
 import { WasteCenter } from "../models/wastecenter.models.js";
+import { getVideoTranscript } from "../utils/transcript.utils.js";
 
+// src/controllers/tools.controller.js
+//import { asyncHandler } from "../utils/asyncHandler.js";
+//import { APIError } from "../utils/Apierror.js";
+//import { ApiResponse } from "../utils/ApiResponse.js";
+import { transcribeFromUrl } from "../utils/Deepgram.utils.js";
 
-const cropWaterData = {
-  rice: 8000,      // liters per hectare per day
-  sugarcane: 7000,
-  cotton: 6000,
-  maize: 5500,
-  banana: 7500,
-  wheat: 4500,
-  potato: 4000,
-  tomato: 4200,
-  onion: 3800,
-  cabbage: 3500,
-  millet: 2500,
-  lentil: 2300,
-  mustard: 2200,
-  groundnut: 2000,
-};
-//TOOL no 1
-const waterconsumption = asyncHandler(async (req, res) => {
-    const sellerid = req.user._id;
+export const transcribeFromLink = asyncHandler(async (req, res) => {
+  const { videoUrl, options = {} } = req.body;
 
-    const { watertype, croptype, area } = req.body;
+  if (!videoUrl) {
+    throw new APIError(400, "videoUrl is required");
+  }
 
-    if (!sellerid) {
-        throw new APIError(400, "Seller ID is required");
-    }
-    const check = await User.findById(sellerid);
-    if (check.role === "buyer" || !check.role) {
-        throw new APIError(403, "Only sellers can access this resource");
-    }
-    if ([watertype, croptype, area].some((field) => !field || field.trim() === "")) {
-        throw new APIError(400, "Watertype, croptype and area is required");
-    }
-    const ACRE_TO_HECTARE = 0.404686;
-    const areaInHectare = area * ACRE_TO_HECTARE;
-    const waterRequired = (cropWaterData[croptype] || 4000) * areaInHectare; // Default to 4000 if crop type not found
+  try {
+    const dgResponse = await transcribeFromUrl(videoUrl, options);
 
-    if(!waterRequired){
-        throw new APIError(400, "Invalid crop type provided");
-    }
-    return res.status(200).json(
-        new ApiResponse(200, "Water consumption calculated",waterRequired));
+    const transcript =
+      dgResponse?.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, { transcript, raw: dgResponse }, "Transcription successful")
+      );
+  } catch (err) {
+    console.error("Deepgram error:", err);
+    throw new APIError(500, "Failed to transcribe audio/video from URL");
+  }
 });
 
+
+// import { transcribeFromUrl } from "../utils/Deepgram.utils.js";
+
+// export const postTranscribeYoutube = asyncHandler(async (req, res) => {
+//   const { youtubeUrl, options = {} } = req.body;
+//   if (!youtubeUrl) throw new APIError(400, "youtubeUrl is required");
+
+//   try {
+//     const dgResponse = await transcribeFromUrl(youtubeUrl, options);
+
+//     const transcript =
+//       dgResponse.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
+
+//     return res
+//       .status(200)
+//       .json(new ApiResponse(200, "Transcription successful", { transcript }));
+//   } catch (err) {
+//     console.error("Deepgram transcription error:", err);
+//     throw new APIError(500, "Failed to transcribe video via Deepgram");
+//   }
+// });
+
+// import { transcribeYoutube } from "../utils/Info.utils.js";
+
+// /**
+//  * POST /api/tools/transcribe/youtube
+//  * Body: { youtubeUrl: string, options?: { punctuate, diarize, language, model, tier } }
+//  */
+// export const postTranscribeYoutube = asyncHandler(async (req, res) => {
+//   const { youtubeUrl, options = {} } = req.body;
+
+//   if (!youtubeUrl) {
+//     throw new APIError(400, "youtubeUrl is required");
+//   }
+
+//   try {
+//     const dgResponse = await transcribeYoutube(youtubeUrl, options);
+
+//     const transcript =
+//       dgResponse?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
+
+//     return res
+//       .status(200)
+//       .json(new ApiResponse(200, "Transcription successful", { transcript, raw: dgResponse }));
+//   } catch (err) {
+//     // If Info.utils throws a normal Error, convert to APIError for consistent handling
+//     const message = err?.message || "Failed to transcribe YouTube video";
+//     throw new APIError(500, message);
+//   }
+// });
+
+//____________________________________________________________________________________________________
+//TOOL no 1
+const waterconsumption = asyncHandler(async (req, res) => {
+  const sellerid = req.user._id;
+
+  const { watertype, croptype, area } = req.body;
+
+  if (!sellerid) {
+    throw new APIError(400, "Seller ID is required");
+  }
+  const check = await User.findById(sellerid);
+  if (check.role === "buyer" || !check.role) {
+    throw new APIError(403, "Only sellers can access this resource");
+  }
+  if (
+    [watertype, croptype, area].some((field) => !field || field.trim() === "")
+  ) {
+    throw new APIError(400, "Watertype, croptype and area is required");
+  }
+  const ACRE_TO_HECTARE = 0.404686;
+  const areaInHectare = area * ACRE_TO_HECTARE;
+  const cropWaterData = {
+    rice: 8000,
+    sugarcane: 7000,
+    cotton: 6000,
+    maize: 5500,
+    banana: 7500,
+    wheat: 4500,
+    potato: 4000,
+    tomato: 4200,
+    onion: 3800,
+    cabbage: 3500,
+    millet: 2500,
+    lentil: 2300,
+    mustard: 2200,
+    groundnut: 2000,
+  };
+  const waterRequired = (cropWaterData[croptype] || 4000) * areaInHectare; // Default to 4000 if crop type not found
+
+  if (!waterRequired) {
+    throw new APIError(400, "Invalid crop type provided");
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Water consumption calculated", waterRequired));
+});
+
+// TOOL no 2
+// working
 const fertilizerConsumption = asyncHandler(async (req, res) => {
   const { croptype, area } = req.body;
 
@@ -57,7 +144,7 @@ const fertilizerConsumption = asyncHandler(async (req, res) => {
   }
 
   const cropFertilizerData = {
-    rice: 110,        
+    rice: 110,
     wheat: 100,
     maize: 101,
     sugarcane: 160,
@@ -81,20 +168,24 @@ const fertilizerConsumption = asyncHandler(async (req, res) => {
 
   switch (croptype.toLowerCase()) {
     case "rice":
-      timing = "Apply 1/3 at transplanting, 1/3 at 25 days, and 1/3 at 45 days after transplanting.";
+      timing =
+        "Apply 1/3 at transplanting, 1/3 at 25 days, and 1/3 at 45 days after transplanting.";
       break;
     case "wheat":
-      timing = "Apply half at sowing and remaining half at first irrigation (20-25 days).";
+      timing =
+        "Apply half at sowing and remaining half at first irrigation (20-25 days).";
       break;
     case "maize":
-      timing = "Apply 1/3 at sowing, 1/3 at knee height, and 1/3 before tasseling.";
+      timing =
+        "Apply 1/3 at sowing, 1/3 at knee height, and 1/3 before tasseling.";
       break;
     case "sugarcane":
       timing = "Apply 1/2 at planting and remaining 1/2 at 3 months.";
       nextUse = "Reapply every 3–4 months for ratoon crop.";
       break;
     case "cotton":
-      timing = "Apply 1/3 at sowing, 1/3 at squaring, and 1/3 at flowering stage.";
+      timing =
+        "Apply 1/3 at sowing, 1/3 at squaring, and 1/3 at flowering stage.";
       break;
     case "potato":
       timing = "Apply 2/3 at planting and 1/3 after 30 days of emergence.";
@@ -110,7 +201,8 @@ const fertilizerConsumption = asyncHandler(async (req, res) => {
     case "lentil":
     case "mustard":
     case "groundnut":
-      timing = "Apply all fertilizer at sowing stage (legumes fix nitrogen naturally).";
+      timing =
+        "Apply all fertilizer at sowing stage (legumes fix nitrogen naturally).";
       break;
   }
 
@@ -127,6 +219,8 @@ const fertilizerConsumption = asyncHandler(async (req, res) => {
 });
 
 // region = K-ELECTRIC and so on FRONTEND NEEDS WORK HERE
+// Tool no 3
+// working
 const electricityBillEstimator = asyncHandler(async (req, res) => {
   const { region, usage } = req.body;
 
@@ -139,7 +233,7 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
   }
 
   const equipmentPowerData = {
-    tubewell: 3700,        
+    tubewell: 3700,
     waterPump: 1000,
     fan: 75,
     light: 15,
@@ -151,62 +245,62 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
 
   const tariffData = {
     "K-Electric": {
-      slabs: [{ upto: Infinity, rate: 28.00, fixedCharge: 400 }],
+      slabs: [{ upto: Infinity, rate: 28.0, fixedCharge: 400 }],
       fcaRate: 1.75,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
-    "LESCO": {
-      slabs: [{ upto: Infinity, rate: 28.90, fixedCharge: 400 }],
+    LESCO: {
+      slabs: [{ upto: Infinity, rate: 28.9, fixedCharge: 400 }],
       fcaRate: 1.85,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
-    "IESCO": {
-      slabs: [{ upto: Infinity, rate: 28.90, fixedCharge: 400 }],
-      fcaRate: 1.90,
+    IESCO: {
+      slabs: [{ upto: Infinity, rate: 28.9, fixedCharge: 400 }],
+      fcaRate: 1.9,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
-    "FESCO": {
-      slabs: [{ upto: Infinity, rate: 28.70, fixedCharge: 400 }],
-      fcaRate: 1.60,
+    FESCO: {
+      slabs: [{ upto: Infinity, rate: 28.7, fixedCharge: 400 }],
+      fcaRate: 1.6,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
-    "GEPCO": {
-      slabs: [{ upto: Infinity, rate: 28.80, fixedCharge: 400 }],
+    GEPCO: {
+      slabs: [{ upto: Infinity, rate: 28.8, fixedCharge: 400 }],
       fcaRate: 1.55,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
-    "MEPCO": {
+    MEPCO: {
       slabs: [{ upto: Infinity, rate: 28.75, fixedCharge: 400 }],
-      fcaRate: 1.70,
+      fcaRate: 1.7,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
-    "HESCO": {
-      slabs: [{ upto: Infinity, rate: 29.00, fixedCharge: 400 }],
-      fcaRate: 2.00,
+    HESCO: {
+      slabs: [{ upto: Infinity, rate: 29.0, fixedCharge: 400 }],
+      fcaRate: 2.0,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
-    "SEPCO": {
-      slabs: [{ upto: Infinity, rate: 29.20, fixedCharge: 400 }],
+    SEPCO: {
+      slabs: [{ upto: Infinity, rate: 29.2, fixedCharge: 400 }],
       fcaRate: 2.05,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
-    "PESCO": {
-      slabs: [{ upto: Infinity, rate: 28.60, fixedCharge: 400 }],
+    PESCO: {
+      slabs: [{ upto: Infinity, rate: 28.6, fixedCharge: 400 }],
       fcaRate: 1.65,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
-    "QESCO": {
-      slabs: [{ upto: Infinity, rate: 29.10, fixedCharge: 400 }],
-      fcaRate: 1.80,
+    QESCO: {
+      slabs: [{ upto: Infinity, rate: 29.1, fixedCharge: 400 }],
+      fcaRate: 1.8,
       dutyRate: 0.015,
       gstRate: 0.18,
     },
@@ -224,7 +318,7 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
     const power = equipmentPowerData[equipment.toLowerCase()];
     if (!power || hoursUsed <= 0) continue;
 
-    const energyKWh = (power * hoursUsed) / 1000; 
+    const energyKWh = (power * hoursUsed) / 1000;
     totalUnits += energyKWh;
 
     breakdown.push({
@@ -239,7 +333,8 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
     throw new APIError(400, "No valid equipment data provided");
   }
 
-  const slab = regionInfo.slabs.find(s => totalUnits <= s.upto) || regionInfo.slabs[0];
+  const slab =
+    regionInfo.slabs.find((s) => totalUnits <= s.upto) || regionInfo.slabs[0];
   const energyCost = totalUnits * slab.rate;
   const fixedCost = slab.fixedCharge;
   const fcaCost = totalUnits * regionInfo.fcaRate;
@@ -249,14 +344,16 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
   const gstCost = subtotal * regionInfo.gstRate;
   const totalCost = subtotal + gstCost;
 
-  breakdown.forEach(item => {
+  breakdown.forEach((item) => {
     const portion = parseFloat(item.energyKWh) / totalUnits;
     item.cost = `Rs. ${(energyCost * portion).toFixed(2)}`;
   });
 
-  let advice = "Use LED bulbs, efficient motors, and schedule pump hours in off-peak times.";
+  let advice =
+    "Use LED bulbs, efficient motors, and schedule pump hours in off-peak times.";
   if (totalCost > 30000)
-    advice = "Consider hybrid or solar setups for high-consumption devices like tubewells.";
+    advice =
+      "Consider hybrid or solar setups for high-consumption devices like tubewells.";
 
   return res.status(200).json(
     new ApiResponse(200, "Electricity bill estimated successfully", {
@@ -283,7 +380,7 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
 //   }
 
 //   const equipmentPowerData = {
-//     tubewell: 3700,        
+//     tubewell: 3700,
 //     waterPump: 1000,
 //     fan: 75,
 //     light: 15,
@@ -302,7 +399,7 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
 //     const power = equipmentPowerData[equipment.toLowerCase()];
 //     if (!power || hoursUsed <= 0) continue;
 
-//     const energyKWh = (power * hoursUsed) / 1000; 
+//     const energyKWh = (power * hoursUsed) / 1000;
 //     const cost = energyKWh * UNIT_RATE;
 //     totalUnits += energyKWh;
 
@@ -336,186 +433,226 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
 //   );
 // });
 
-
 //______________________TO BE IMPLEMENTED_______________________________________
 // Report crop waste and find nearest collection centers
 const reportCropWaste = asyncHandler(async (req, res) => {
-    const { cropType, quantity, latitude, longitude } = req.body;
-    const farmerId = req.user._id;
+  const { cropType, quantity, latitude, longitude } = req.body;
+  const farmerId = req.user._id;
 
-    // Validate input
-    if (!(cropType && quantity && latitude && longitude)) {
-        throw new APIError(400, "All fields are required: cropType, quantity, latitude, longitude");
-    }
+  // Validate input
+  if (!(cropType && quantity && latitude && longitude)) {
+    throw new APIError(
+      400,
+      "All fields are required: cropType, quantity, latitude, longitude"
+    );
+  }
 
-    if (quantity <= 0) {
-        throw new APIError(400, "Quantity must be greater than 0");
-    }
+  if (quantity <= 0) {
+    throw new APIError(400, "Quantity must be greater than 0");
+  }
 
-    // Find nearest waste collection centers that accept this crop type
-    // and have available capacity
-    const nearestCenters = await WasteCenter.find({
-        acceptedCropTypes: cropType,
-        currentCapacity: { $lte: quantity },
-        location: {
-            $near: {
-                $geometry: {
-                    type: "Point",
-                    coordinates: [longitude, latitude]
-                },
-                $maxDistance: 100000 // 100 kilometers
-            }
-        }
-    })
+  // Find nearest waste collection centers that accept this crop type
+  // and have available capacity
+  const nearestCenters = await WasteCenter.find({
+    acceptedCropTypes: cropType,
+    currentCapacity: { $lte: quantity },
+    location: {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: [longitude, latitude],
+        },
+        $maxDistance: 100000, // 100 kilometers
+      },
+    },
+  })
     .limit(5)
     .select("name location address contactNumber currentCapacity maxCapacity");
 
-    if (!nearestCenters.length) {
-        throw new APIError(404, "No suitable collection centers found nearby");
-    }
+  if (!nearestCenters.length) {
+    throw new APIError(404, "No suitable collection centers found nearby");
+  }
 
-    // Create crop waste request
-    const cropWaste = await CropWaste.create({
-        farmerId,
-        cropType,
-        quantity,
-        location: {
-            type: "Point",
-            coordinates: [longitude, latitude]
-        },
-        status: "pending"
-    });
+  // Create crop waste request
+  const cropWaste = await CropWaste.create({
+    farmerId,
+    cropType,
+    quantity,
+    location: {
+      type: "Point",
+      coordinates: [longitude, latitude],
+    },
+    status: "pending",
+  });
 
-    // Format the response with centers and their distances
-    const centersWithDistance = nearestCenters.map(center => {
-        const distance = calculateDistance(
-            latitude,
-            longitude,
-            center.location.coordinates[1],
-            center.location.coordinates[0]
-        );
-
-        return {
-            ...center.toObject(),
-            distance: Math.round(distance * 10) / 10, // Round to 1 decimal place
-            mapUrl: generateMapUrl(latitude, longitude, 
-                center.location.coordinates[1], 
-                center.location.coordinates[0])
-        };
-    });
-
-    return res.status(201).json(
-        new ApiResponse(201, "Crop waste reported successfully", {
-            wasteRequest: cropWaste,
-            nearestCenters: centersWithDistance
-        })
+  // Format the response with centers and their distances
+  const centersWithDistance = nearestCenters.map((center) => {
+    const distance = calculateDistance(
+      latitude,
+      longitude,
+      center.location.coordinates[1],
+      center.location.coordinates[0]
     );
+
+    return {
+      ...center.toObject(),
+      distance: Math.round(distance * 10) / 10, // Round to 1 decimal place
+      mapUrl: generateMapUrl(
+        latitude,
+        longitude,
+        center.location.coordinates[1],
+        center.location.coordinates[0]
+      ),
+    };
+  });
+
+  return res.status(201).json(
+    new ApiResponse(201, "Crop waste reported successfully", {
+      wasteRequest: cropWaste,
+      nearestCenters: centersWithDistance,
+    })
+  );
 });
 
 // Helper function to calculate distance between two points using Haversine formula
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 };
 
 const toRad = (value) => {
-    return value * Math.PI / 180;
+  return (value * Math.PI) / 180;
 };
 
 // Generate Google Maps URL for directions
 const generateMapUrl = (startLat, startLon, endLat, endLon) => {
-    return `https://www.google.com/maps/dir/${startLat},${startLon}/${endLat},${endLon}`;
+  return `https://www.google.com/maps/dir/${startLat},${startLon}/${endLat},${endLon}`;
 };
 
 // Get all waste requests for a farmer
 const getFarmerWasteRequests = asyncHandler(async (req, res) => {
-    const farmerId = req.user._id;
+  const farmerId = req.user._id;
 
-    const requests = await CropWaste.find({ farmerId })
-        .populate("assignedCenter", "name address contactNumber")
-        .sort({ createdAt: -1 });
+  const requests = await CropWaste.find({ farmerId })
+    .populate("assignedCenter", "name address contactNumber")
+    .sort({ createdAt: -1 });
 
-    return res.status(200).json(
-        new ApiResponse(200, "Waste requests retrieved successfully", requests)
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, "Waste requests retrieved successfully", requests)
     );
 });
 
 // Update waste request status
 const updateWasteRequestStatus = asyncHandler(async (req, res) => {
-    const { requestId } = req.params;
-    const { status, centerId } = req.body;
+  const { requestId } = req.params;
+  const { status, centerId } = req.body;
 
-    const wasteRequest = await CropWaste.findById(requestId);
-    if (!wasteRequest) {
-        throw new APIError(404, "Waste request not found");
-    }
+  const wasteRequest = await CropWaste.findById(requestId);
+  if (!wasteRequest) {
+    throw new APIError(404, "Waste request not found");
+  }
 
-    if (status === "assigned" && !centerId) {
-        throw new APIError(400, "Collection center ID is required for assignment");
-    }
+  if (status === "assigned" && !centerId) {
+    throw new APIError(400, "Collection center ID is required for assignment");
+  }
 
-    wasteRequest.status = status;
-    if (centerId) {
-        wasteRequest.assignedCenter = centerId;
-    }
+  wasteRequest.status = status;
+  if (centerId) {
+    wasteRequest.assignedCenter = centerId;
+  }
 
-    await wasteRequest.save();
+  await wasteRequest.save();
 
-    return res.status(200).json(
-        new ApiResponse(200, "Waste request updated successfully", wasteRequest)
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, "Waste request updated successfully", wasteRequest)
     );
 });
 
 // Add waste collection center
 const addWasteCollectionCenter = asyncHandler(async (req, res) => {
-    const {
-        name,
-        latitude,
-        longitude,
-        address,
-        contactNumber,
-        acceptedCropTypes,
-        maxCapacity
-    } = req.body;
+  const {
+    name,
+    latitude,
+    longitude,
+    address,
+    contactNumber,
+    acceptedCropTypes,
+    maxCapacity,
+  } = req.body;
 
-    // Validate input
-    if (!(name && latitude && longitude && address && contactNumber && acceptedCropTypes && maxCapacity)) {
-        throw new APIError(400, "All fields are required");
-    }
+  // Validate input
+  if (
+    !(
+      name &&
+      latitude &&
+      longitude &&
+      address &&
+      contactNumber &&
+      acceptedCropTypes &&
+      maxCapacity
+    )
+  ) {
+    throw new APIError(400, "All fields are required");
+  }
 
-    const center = await WasteCenter.create({
-        name,
-        location: {
-            type: "Point",
-            coordinates: [longitude, latitude]
-        },
-        address,
-        contactNumber,
-        acceptedCropTypes,
-        currentCapacity: 0,
-        maxCapacity
-    });
+  const center = await WasteCenter.create({
+    name,
+    location: {
+      type: "Point",
+      coordinates: [longitude, latitude],
+    },
+    address,
+    contactNumber,
+    acceptedCropTypes,
+    currentCapacity: 0,
+    maxCapacity,
+  });
 
-    return res.status(201).json(
-        new ApiResponse(201, "Waste collection center added successfully", center)
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(201, "Waste collection center added successfully", center)
     );
 });
 
 // Get all waste collection centers
 const getAllWasteCenters = asyncHandler(async (req, res) => {
-    const centers = await WasteCenter.find()
-        .select("-__v")
-        .sort({ createdAt: -1 });
+  const centers = await WasteCenter.find()
+    .select("-__v")
+    .sort({ createdAt: -1 });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, "Waste centers retrieved successfully", centers)
+    );
+});
+
+// Get transcript from YouTube video
+const getYouTubeTranscript = asyncHandler(async (req, res) => {
+    const { videoUrl } = req.body;
+
+    if (!videoUrl) {
+        throw new APIError(400, "Video URL is required");
+    }
+
+    const transcript = await getVideoTranscript(videoUrl);
 
     return res.status(200).json(
-        new ApiResponse(200, "Waste centers retrieved successfully", centers)
+        new ApiResponse(200, "Video transcript generated successfully", transcript)
     );
 });
 
@@ -527,5 +664,6 @@ export {
     getAllWasteCenters,
     waterconsumption,
     fertilizerConsumption,
-    electricityBillEstimator
+    electricityBillEstimator,
+    getYouTubeTranscript
 };

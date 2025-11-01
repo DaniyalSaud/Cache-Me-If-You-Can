@@ -31,6 +31,7 @@ import toolRouter from "./routes/tools.routes.js";
 
 import sellerRouter from "./routes/seller.routes.js";
 
+
 /// ROUTES declaration
 
 app.use("/api/v/users", userRouter);
@@ -38,6 +39,8 @@ app.use("/api/v/products",productRouter);
 app.use("/api/v/orders",orderRouter);
 app.use("/api/v/admins",adminRouter);
 
+//__________________________________________________
+//app.use("/api/v/tools",toolRouter);
 //_________________________________________________
 
 app.use("/api/v/tools",toolRouter);
