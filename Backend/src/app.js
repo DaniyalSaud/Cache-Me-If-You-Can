@@ -28,6 +28,7 @@ import productRouter from "./routes/product.routes.js";
 import orderRouter from "./routes/order.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import toolRouter from "./routes/tools.routes.js";
+import loanRouter from "./routes/loan.routes.js";
 
 import sellerRouter from "./routes/seller.routes.js";
 
@@ -44,5 +45,6 @@ app.use("/api/v/admins",adminRouter);
 //_________________________________________________
 
 app.use("/api/v/tools",toolRouter);
+app.use("/api/v/loans",loanRouter);
 app.use("/api/v/sellers",sellerRouter);
 export { app };

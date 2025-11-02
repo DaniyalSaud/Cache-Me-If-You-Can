@@ -79,15 +79,46 @@ type WasteReport = {
   updatedAt: string;
 };
 
+type LoanApplication = {
+  _id: string;
+  farmerId: {
+    _id: string;
+    username: string;
+    email: string;
+    phoneno: string;
+  };
+  loanType: string;
+  amount: number;
+  purpose: string;
+  duration: number;
+  farmSize: number;
+  annualIncome: number;
+  collateral: string;
+  cnicNumber: string;
+  status: string;
+  reviewedBy?: {
+    _id: string;
+    username: string;
+    email: string;
+  };
+  reviewDate?: string;
+  rejectionReason?: string;
+  approvalNotes?: string;
+  disbursementDate?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "orders" | "waste-centers" | "waste-reports">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "orders" | "waste-centers" | "waste-reports" | "loan-applications">("overview");
   
   // Data states
   const [users, setUsers] = useState<User[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [wasteCenters, setWasteCenters] = useState<WasteCenter[]>([]);
+  const [loanApplications, setLoanApplications] = useState<LoanApplication[]>([]);
   const [wasteReports, setWasteReports] = useState<WasteReport[]>([]);
   const [showAddCenterModal, setShowAddCenterModal] = useState(false);
   const [stats, setStats] = useState({
@@ -218,6 +249,8 @@ export default function AdminDashboard() {
         fetchWasteCenters();
       } else if (activeTab === "waste-reports") {
         fetchWasteReports();
+      } else if (activeTab === "loan-applications") {
+        fetchLoanApplications();
       }
     }
   }, [activeTab, isAuthenticated]);
@@ -265,6 +298,45 @@ export default function AdminDashboard() {
     } catch (error: any) {
       console.error("Error fetching waste reports:", error);
       setError(error.message || "Failed to fetch waste reports");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLoanApplications = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await apiRequest(`${API_ENDPOINTS.LOANS}/all`, {
+        method: "GET",
+      });
+      setLoanApplications(response.data.loans || []);
+    } catch (error: any) {
+      console.error("Error fetching loan applications:", error);
+      setError(error.message || "Failed to fetch loan applications");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateLoanStatus = async (loanId: string, status: string, reason?: string, notes?: string) => {
+    try {
+      setLoading(true);
+      setError("");
+      const body: any = { status };
+      if (reason) body.rejectionReason = reason;
+      if (notes) body.approvalNotes = notes;
+
+      await apiRequest(`${API_ENDPOINTS.LOANS}/${loanId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+
+      // Refresh loan applications
+      await fetchLoanApplications();
+    } catch (error: any) {
+      console.error("Error updating loan status:", error);
+      setError(error.message || "Failed to update loan status");
     } finally {
       setLoading(false);
     }
@@ -696,6 +768,16 @@ export default function AdminDashboard() {
             }`}
           >
             📋 Waste Reports
+          </button>
+          <button
+            onClick={() => setActiveTab("loan-applications")}
+            className={`px-4 py-2 font-semibold transition-all ${
+              activeTab === "loan-applications"
+                ? "text-primary-700 border-b-2 border-primary-700"
+                : "text-text-600 hover:text-primary-700"
+            }`}
+          >
+            🏦 Loan Applications
           </button>
         </div>
 
@@ -1233,6 +1315,222 @@ export default function AdminDashboard() {
                           </div>
                         )}
                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Loan Applications Tab */}
+        {activeTab === "loan-applications" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-text-900">
+                Loan Applications ({loanApplications.length})
+              </h2>
+              <button
+                onClick={fetchLoanApplications}
+                disabled={loading}
+                className="btn-outline text-sm"
+              >
+                {loading ? "🔄 Loading..." : "🔄 Refresh"}
+              </button>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+                ⚠️ {error}
+              </div>
+            )}
+
+            {loading ? (
+              <div className="card bg-white text-center py-12">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="animate-spin text-4xl">🔄</span>
+                  <span className="text-text-600">Loading loan applications...</span>
+                </div>
+              </div>
+            ) : loanApplications.length === 0 ? (
+              <div className="card bg-white text-center py-12">
+                <div className="text-5xl mb-4">🏦</div>
+                <h3 className="text-xl font-semibold text-text-900 mb-2">
+                  No Loan Applications Yet
+                </h3>
+                <p className="text-text-600">
+                  Farmers haven't submitted any loan applications yet.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {loanApplications.map((loan) => (
+                  <div key={loan._id} className="card bg-white hover:shadow-lg transition-shadow">
+                    <div className="flex flex-col gap-6">
+                      {/* Loan Header */}
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-xl font-bold text-text-900 mb-1">
+                            {loan.loanType}
+                          </h3>
+                          <p className="text-sm text-text-600">
+                            Applied: {new Date(loan.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span className={`px-4 py-2 rounded-full text-sm font-bold uppercase ${
+                          loan.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300' :
+                          loan.status === 'under-review' ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' :
+                          loan.status === 'approved' ? 'bg-green-100 text-green-800 border-2 border-green-300' :
+                          loan.status === 'rejected' ? 'bg-red-100 text-red-800 border-2 border-red-300' :
+                          'bg-purple-100 text-purple-800 border-2 border-purple-300'
+                        }`}>
+                          {loan.status}
+                        </span>
+                      </div>
+
+                      {/* Farmer Info */}
+                      <div className="bg-gradient-to-r from-primary-50 to-accent-50 border-2 border-primary-200 rounded-lg p-4">
+                        <h4 className="font-bold text-primary-900 mb-2 flex items-center gap-2">
+                          <span className="text-xl">👨‍🌾</span>
+                          <span>Farmer Details</span>
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                          <p><strong>Name:</strong> {loan.farmerId.username}</p>
+                          <p><strong>Email:</strong> {loan.farmerId.email}</p>
+                          <p><strong>Phone:</strong> {loan.farmerId.phoneno}</p>
+                          <p><strong>CNIC:</strong> {loan.cnicNumber}</p>
+                        </div>
+                      </div>
+
+                      {/* Loan Details */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-primary-50 border-2 border-primary-200 rounded-lg p-3">
+                          <p className="text-xs text-primary-700 mb-1">Amount</p>
+                          <p className="text-lg font-bold text-primary-900">
+                            Rs. {loan.amount.toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
+                          <p className="text-xs text-blue-700 mb-1">Duration</p>
+                          <p className="text-lg font-bold text-blue-900">
+                            {loan.duration} months
+                          </p>
+                        </div>
+                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3">
+                          <p className="text-xs text-green-700 mb-1">Farm Size</p>
+                          <p className="text-lg font-bold text-green-900">
+                            {loan.farmSize} acres
+                          </p>
+                        </div>
+                        <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-3">
+                          <p className="text-xs text-amber-700 mb-1">Annual Income</p>
+                          <p className="text-lg font-bold text-amber-900">
+                            Rs. {loan.annualIncome.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Purpose & Collateral */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
+                          <h4 className="font-bold text-gray-900 mb-2">📝 Purpose:</h4>
+                          <p className="text-sm text-gray-700">{loan.purpose}</p>
+                        </div>
+                        <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
+                          <h4 className="font-bold text-gray-900 mb-2">🏠 Collateral:</h4>
+                          <p className="text-sm text-gray-700">{loan.collateral}</p>
+                        </div>
+                      </div>
+
+                      {/* Admin Actions */}
+                      {loan.status === 'pending' || loan.status === 'under-review' ? (
+                        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                          <h4 className="font-bold text-blue-900 mb-3">Admin Actions:</h4>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => {
+                                if (confirm('Mark this application as under review?')) {
+                                  handleUpdateLoanStatus(loan._id, 'under-review');
+                                }
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                              ⏳ Mark Under Review
+                            </button>
+                            <button
+                              onClick={() => {
+                                const notes = prompt('Enter approval notes (optional):');
+                                if (notes !== null) {
+                                  handleUpdateLoanStatus(loan._id, 'approved', undefined, notes || undefined);
+                                }
+                              }}
+                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                              ✅ Approve
+                            </button>
+                            <button
+                              onClick={() => {
+                                const reason = prompt('Enter rejection reason:');
+                                if (reason) {
+                                  handleUpdateLoanStatus(loan._id, 'rejected', reason);
+                                }
+                              }}
+                              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                              ❌ Reject
+                            </button>
+                          </div>
+                        </div>
+                      ) : loan.status === 'approved' ? (
+                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-bold text-green-900 mb-2">✅ Approved</h4>
+                              {loan.approvalNotes && (
+                                <p className="text-sm text-green-800 mb-2">
+                                  <strong>Notes:</strong> {loan.approvalNotes}
+                                </p>
+                              )}
+                              {loan.reviewedBy && (
+                                <p className="text-xs text-green-600">
+                                  Reviewed by: {loan.reviewedBy.username}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (confirm('Mark this loan as disbursed?')) {
+                                  handleUpdateLoanStatus(loan._id, 'disbursed');
+                                }
+                              }}
+                              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                              💰 Mark Disbursed
+                            </button>
+                          </div>
+                        </div>
+                      ) : loan.status === 'rejected' ? (
+                        <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                          <h4 className="font-bold text-red-900 mb-2">❌ Rejected</h4>
+                          {loan.rejectionReason && (
+                            <p className="text-sm text-red-800 mb-2">
+                              <strong>Reason:</strong> {loan.rejectionReason}
+                            </p>
+                          )}
+                          {loan.reviewedBy && (
+                            <p className="text-xs text-red-600">
+                              Reviewed by: {loan.reviewedBy.username}
+                            </p>
+                          )}
+                        </div>
+                      ) : loan.status === 'disbursed' ? (
+                        <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
+                          <h4 className="font-bold text-purple-900 mb-2">💰 Loan Disbursed</h4>
+                          <p className="text-sm text-purple-800">
+                            Disbursement Date: {loan.disbursementDate ? new Date(loan.disbursementDate).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ))}

@@ -24,6 +24,9 @@ export const API_ENDPOINTS = {
   TOOLS: `${API_BASE_URL}/api/v/tools`,
   WASTE_REPORT: `${API_BASE_URL}/api/v/tools/waste/report`,
   
+  // Loan endpoints
+  LOANS: `${API_BASE_URL}/api/v/loans`,
+  
   // Seller endpoints
   SELLERS: `${API_BASE_URL}/api/v/sellers`,
 };

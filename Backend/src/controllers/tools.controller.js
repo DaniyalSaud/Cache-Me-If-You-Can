@@ -19,11 +19,24 @@ const waterconsumption = asyncHandler(async (req, res) => {
   if (check.role === "buyer" || !check.role) {
     throw new APIError(403, "Only sellers can access this resource");
   }
-  if (
-    [watertype, croptype, area].some((field) => !field || field.trim() === "")
-  ) {
+  
+  // Validate inputs
+  if (!watertype || !croptype || !area) {
     throw new APIError(400, "Watertype, croptype and area is required");
   }
+  
+  if (typeof watertype !== "string" || watertype.trim() === "") {
+    throw new APIError(400, "Valid watertype is required");
+  }
+  
+  if (typeof croptype !== "string" || croptype.trim() === "") {
+    throw new APIError(400, "Valid croptype is required");
+  }
+  
+  if (typeof area !== "number" || area <= 0) {
+    throw new APIError(400, "Area must be a positive number");
+  }
+  
   const ACRE_TO_HECTARE = 0.404686;
   const areaInHectare = area * ACRE_TO_HECTARE;
   const cropWaterData = {
@@ -42,11 +55,8 @@ const waterconsumption = asyncHandler(async (req, res) => {
     mustard: 2200,
     groundnut: 2000,
   };
-  const waterRequired = (cropWaterData[croptype] || 4000) * areaInHectare; // Default to 4000 if crop type not found
+  const waterRequired = (cropWaterData[croptype.toLowerCase()] || 4000) * areaInHectare;
 
-  if (!waterRequired) {
-    throw new APIError(400, "Invalid crop type provided");
-  }
   return res
     .status(200)
     .json(new ApiResponse(200, "Water consumption calculated", waterRequired));

@@ -525,7 +525,7 @@ export default function FarmerDashboard() {
                           Farming Tools & Calculators
                         </h3>
                         <p className="text-sm text-teal-800 mb-3">
-                          Calculate water, fertilizer requirements and estimate electricity bills. Smart tools for efficient farming.
+                          Calculate water consumption, fertilizer requirements, and electricity costs for your farm operations.
                         </p>
                         <div className="flex items-center gap-2 text-xs text-teal-700 font-semibold">
                           <span>Open Tools</span>
@@ -537,22 +537,25 @@ export default function FarmerDashboard() {
                 </Link>
 
                 {/* Loan & Subsidies */}
-                <div className="card bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200 hover:shadow-lg transition-all cursor-pointer group">
-                  <div className="flex items-start gap-4">
-                    <div className="text-5xl">🏦</div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-rose-900 mb-2 group-hover:text-rose-700">
-                        Loans & Subsidies
-                      </h3>
-                      <p className="text-sm text-rose-800 mb-3">
-                        Find information about agricultural loans, subsidies, and government schemes for farmers.
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-rose-700 font-semibold">
-                        <span>Coming Soon</span>
+                <Link to="/loan-application" className="block">
+                  <div className="card bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200 hover:shadow-lg transition-all cursor-pointer group">
+                    <div className="flex items-start gap-4">
+                      <div className="text-5xl">🏦</div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-rose-900 mb-2 group-hover:text-rose-700">
+                          Loans & Subsidies
+                        </h3>
+                        <p className="text-sm text-rose-800 mb-3">
+                          Apply for agricultural loans and track your loan application status.
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-rose-700 font-semibold">
+                          <span>Apply Now</span>
+                          <span>→</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               </div>
             </div>
           </div>
