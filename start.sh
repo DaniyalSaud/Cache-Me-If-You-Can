@@ -1,4 +1,13 @@
 #!/bin/bash
-cd Backend                # go into your backend folder
-npm install               # install dependencies
-npm start                 # run the backend
+# ---- start.sh ----
+set -e
+
+echo "🚀 Starting MERN backend on Railway..."
+
+cd Backend
+
+# Install dependencies
+npm install
+
+# Start the backend server
+npm run start
