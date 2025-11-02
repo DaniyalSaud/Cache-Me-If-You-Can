@@ -6,9 +6,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
 import { Order } from "../models/order.models.js";
 import { Auditlog } from "../models/auditlog.models.js";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Order creation logic
 // basic logic with Auditlog done
@@ -56,7 +53,6 @@ const createOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  //console.log(`💰 Total amount: ₹${totalAmount}`);
 
   // Create order without payment for now (can add Stripe later)
   
@@ -73,7 +69,7 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new APIError(500, "Failed to create order");
   }
 
-  console.log("✅ Order created:", createdOrder._id);
+  console.log(" Order created:", createdOrder._id);
 
   // Create audit logs for each seller
   const sellers = [...new Set(orderProducts.map(p => p.sellerId.toString()))];
@@ -92,30 +88,6 @@ const createOrder = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, "Order Created Successfully", createdOrder));
 });
 
-//     const Selleridchk = product.sellerId?.toString();
-//     if (!Selleridchk){
-//         throw new APIError(404, "Seller Not Found for this Product");
-//     }
-
-//     // if (sellerId !== Selleridchk) {
-//     //     throw new APIError(400, "SellerId does not match with product's sellerId");
-//     // }
-
-//     const Order = await Order.create({
-//         buyerId,
-//         sellerId,
-//         productId,
-//         status: "pending",
-//         amount,
-//         escrowRelease: false,
-//         shippingProvider,
-//         trackingId,
-//     })
-//     if (!Order) {
-//         throw new APIError(500, "Something Went Wrong in Order Creation");
-//     }
-//     return res.status(201).json(new ApiResponse(201, "Order Created Successfully", Order));
-// });
 
 const getOrderById = asyncHandler(async (req, res) => {
   const orderId = req.params.id;
@@ -269,7 +241,7 @@ const getOrdersBySeller = asyncHandler(async (req, res) => {
     throw new APIError(401, "Authentication Error");
   }
 
-  console.log("📋 Fetching orders for seller:", sellerId);
+  console.log(" Fetching orders for seller:", sellerId);
 
   // Find all orders that contain products from this seller
   const orders = await Order.find({
@@ -291,7 +263,7 @@ const getOrdersBySeller = asyncHandler(async (req, res) => {
 
   const pendingOrders = orders.filter(o => o.status === "pending").length;
 
-  console.log(`✅ Found ${orders.length} orders for seller`);
+  console.log(` Found ${orders.length} orders for seller`);
 
   res.status(200).json(
     new ApiResponse(200, "Orders Fetched Successfully", {
@@ -356,24 +328,6 @@ const raiseDispute = asyncHandler(async (req, res) => {
 });
 
 
-// const LogOrderAction = asyncHandler(async (req, res) => {
-//   const OrderId = req.params._id;
-//   const UserId = req.user._id;
-
-//   if (!(OrderId || UserId)) {
-//     throw new APIError(400, "Authentication Error");
-//   }
-//   const Action = "Order Placed";
-//   const Auditlog = await Auditlog.Create({
-//     OrderId,
-//     UserId,
-//     Action,
-//     Amount: mongoose.Types.ObjectId(OrderId),
-//   });
-//   return res
-//     .status(201)
-//     .json(new ApiResponse(201, "Order Action Logged Successfully", {}));
-// });
 
 export {
   createOrder,

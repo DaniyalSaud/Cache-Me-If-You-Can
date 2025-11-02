@@ -2,28 +2,15 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { APIError } from "../utils/Apierror.js";
 import { Product } from "../models/product.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { Mongoose } from "mongoose";
-import { Verification } from "../models/verification.models.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 
-// const getAllProducts = asyncHandler(async (req, res) => {
-//   const products = await Product.find({});
-//   return res
-//     .status(200)
-//     .json(
-//       new ApiResponse(200, "Products fetched successfully", products),
-//     );
-//  });
-
-
-// working 
 const getAllProducts = asyncHandler(async (req, res) => {
   // get page number from query (default = 1)
   const page = parseInt(req.query.page) || 1;
   const limit = 40; // number of products per page
   const skip = (page - 1) * limit;
 
-  console.log("📋 Fetching all products...");
+  console.log(" Fetching all products...");
   
   // find products with pagination
   const products = await Product.find({})
@@ -37,7 +24,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
   // total pages
   const totalPages = Math.ceil(totalProducts / limit);
 
-  console.log(`📦 Found ${products.length} products (Total: ${totalProducts})`);
+  console.log(` Found ${products.length} products (Total: ${totalProducts})`);
 
   return res.status(200).json(
     new ApiResponse(200, "Products fetched successfully", {
@@ -88,7 +75,7 @@ const createProduct = asyncHandler(async (req, res) => {
 
   const { title, description, price, condition} = req.body;
 
-  console.log("📝 Creating product with:", { title, price, condition, filesCount: req.files?.length });
+  console.log(" Creating product with:", { title, price, condition, filesCount: req.files?.length });
 
   // validate sellerId
   if (!sellerId) {
@@ -113,7 +100,7 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new APIError(400, "Maximum 12 images are allowed");
   }
 
-  console.log("📤 Uploading images to Cloudinary...");
+  console.log(" Uploading images to Cloudinary...");
   // Upload images to cloudinary
   const imageUploadPromises = req.files.map(file => uploadOnCloudinary(file.path));
   const uploadedImages = await Promise.all(imageUploadPromises);
@@ -127,7 +114,7 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new APIError(400, "Failed to upload images");
   }
 
-  console.log(`✅ Uploaded ${images.length} images successfully`);
+  console.log(` Uploaded ${images.length} images successfully`);
 
   const newProduct = await Product.create({
     title,
@@ -144,7 +131,7 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new APIError(500, "Something went wrong in product creation");
   }
 
-  console.log("✅ Product created with ID:", newProduct._id);
+  console.log(" Product created with ID:", newProduct._id);
 
   return res
     .status(201)

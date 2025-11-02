@@ -29,6 +29,7 @@ router.route('/fertilizer-consumption').post(verifyJWT, authorizeRoles("seller",
 
 router.route('/electricity-bill-estimator').post(verifyJWT, authorizeRoles("seller", "admin"),electricityBillEstimator);
 
+// GEMININ ROUTE
 router.route('/ask').post(verifyJWT,authorizeRoles("seller","admin"),getGeminiResponse);
 
 
