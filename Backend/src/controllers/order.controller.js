@@ -12,7 +12,7 @@ import { Auditlog } from "../models/auditlog.models.js";
 // ______________________________HAVE TO DISCUSS SOME LOGIC WITH TEAM
 const createOrder = asyncHandler(async (req, res) => {
   const buyerId = req.user._id;
-  const { products, shippingAddress } = req.body;
+  const { products, shippingAddress, transactionId } = req.body;
 
   if (!buyerId) {
     throw new APIError(400, "Authentication required");
@@ -24,6 +24,10 @@ const createOrder = asyncHandler(async (req, res) => {
 
   if (!shippingAddress) {
     throw new APIError(400, "Shipping address is required");
+  }
+
+  if (!transactionId) {
+    throw new APIError(400, "Transaction ID is required");
   }
 
   // Verify buyer exists
@@ -61,7 +65,8 @@ const createOrder = asyncHandler(async (req, res) => {
     products: orderProducts,
     status: "pending",
     totalAmount,
-    paymentStatus: "pending",
+    paymentStatus: "paid", // Mark as paid since transaction ID is provided
+    paymentIntentId: transactionId, // Store the Easypaisa transaction ID
     shippingAddress,
   });
 

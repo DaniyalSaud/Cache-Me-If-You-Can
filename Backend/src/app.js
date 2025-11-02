@@ -28,16 +28,17 @@ import productRouter from "./routes/product.routes.js";
 import orderRouter from "./routes/order.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import toolRouter from "./routes/tools.routes.js";
+import paymentRouter from "./routes/payment.routes.js";
 import loanRouter from "./routes/loan.routes.js";
 
 
 /// ROUTES declaration
 
 app.use("/api/v/users", userRouter);
-app.use("/api/v/products",productRouter);
-app.use("/api/v/orders",orderRouter);
-app.use("/api/v/admins",adminRouter);
-
+app.use("/api/v/products", productRouter);
+app.use("/api/v/orders", orderRouter);
+app.use("/api/v/admins", adminRouter);
+app.use("/api/v/payments", paymentRouter);
 //__________________________________________________
 //app.use("/api/v/tools",toolRouter);
 //_________________________________________________

@@ -17,6 +17,10 @@ export const API_ENDPOINTS = {
   // Order endpoints
   ORDERS: `${API_BASE_URL}/api/v/orders`,
   
+  // Payment endpoints
+  PAYMENT: `${API_BASE_URL}/api/v/payments`,
+  EASYPAISA_NUMBER: `${API_BASE_URL}/api/v/payments/easypaisa-number`,
+  
   // Admin endpoints
   ADMIN: `${API_BASE_URL}/api/v/admins`,
   

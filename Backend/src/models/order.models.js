@@ -58,10 +58,13 @@ const orderSchema = new Schema(
     shippingAddress: {
       fullName: String,
       phone: String,
+      addressLine1: String,
+      addressLine2: String,
       address: String,
       city: String,
       state: String,
       pincode: String,
+      country: String,
     },
     shippingProvider: {
       type: String,

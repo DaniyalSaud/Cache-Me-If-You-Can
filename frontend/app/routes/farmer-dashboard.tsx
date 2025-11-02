@@ -46,6 +46,8 @@ export default function FarmerDashboard() {
 
   const [activeTab, setActiveTab] = useState<"overview" | "products" | "orders" | "tools" | "chatbot">("overview");
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showEditProductModal, setShowEditProductModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
@@ -128,6 +130,38 @@ export default function FarmerDashboard() {
       localStorage.clear();
       window.location.href = '/';
     }
+  };
+
+  // Handle delete product
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      console.log("🗑️ Deleting product:", productId);
+      
+      const response = await apiRequest(`${API_ENDPOINTS.PRODUCTS}/delete/${productId}`, {
+        method: 'DELETE',
+      });
+
+      console.log("✅ Product deleted successfully:", response);
+      
+      // Refresh products list
+      await fetchProducts();
+      
+      alert('Product deleted successfully!');
+    } catch (error: any) {
+      console.error("❌ Error deleting product:", error);
+      alert(error.message || 'Failed to delete product');
+    }
+  };
+
+  // Handle edit product click
+  const handleEditProduct = (product: Product) => {
+    console.log("✏️ Editing product:", product);
+    setSelectedProduct(product);
+    setShowEditProductModal(true);
   };
 
   const [orders] = useState<Order[]>([]);
@@ -379,7 +413,10 @@ export default function FarmerDashboard() {
                 <span>🥕</span>
                 <span>My Products</span>
               </h2>
-              <button className="btn-primary text-sm">
+              <button 
+                onClick={() => setShowAddProductModal(true)}
+                className="btn-primary text-sm"
+              >
                 ➕ Add Product
               </button>
             </div>
@@ -439,10 +476,16 @@ export default function FarmerDashboard() {
                         Added: {new Date(product.createdAt).toLocaleDateString()}
                       </span>
                       <div className="flex gap-2">
-                        <button className="text-xs px-3 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors font-semibold">
+                        <button 
+                          onClick={() => handleEditProduct(product)}
+                          className="text-xs px-3 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors font-semibold"
+                        >
                           Edit
                         </button>
-                        <button className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors font-semibold">
+                        <button 
+                          onClick={() => handleDeleteProduct(product._id)}
+                          className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors font-semibold"
+                        >
                           Delete
                         </button>
                       </div>
@@ -624,6 +667,22 @@ export default function FarmerDashboard() {
           onSuccess={() => {
             fetchProducts(); // Refresh products list
             setShowAddProductModal(false);
+          }}
+        />
+      )}
+
+      {/* Edit Product Modal */}
+      {showEditProductModal && selectedProduct && (
+        <EditProductModal 
+          product={selectedProduct}
+          onClose={() => {
+            setShowEditProductModal(false);
+            setSelectedProduct(null);
+          }}
+          onSuccess={() => {
+            fetchProducts(); // Refresh products list
+            setShowEditProductModal(false);
+            setSelectedProduct(null);
           }}
         />
       )}
@@ -1091,3 +1150,240 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
     </div>
   );
 }
+
+// Edit Product Modal Component
+function EditProductModal({ 
+  product, 
+  onClose, 
+  onSuccess 
+}: { 
+  product: Product; 
+  onClose: () => void; 
+  onSuccess?: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    title: product.title,
+    description: product.description,
+    price: product.price.toString(),
+    condition: product.condition,
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('✏️ Updating product:', product._id);
+      console.log('📝 Form data:', formData);
+
+      const response = await apiRequest(`${API_ENDPOINTS.PRODUCTS}/update/${product._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          condition: formData.condition,
+        }),
+      });
+
+      console.log('✅ Product updated successfully!', response);
+      setSuccess(true);
+
+      // Close modal and refresh products after 1.5 seconds
+      setTimeout(() => {
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          onClose();
+        }
+      }, 1500);
+    } catch (err: any) {
+      console.error('❌ Product update error:', err);
+      setError(err.message || 'Failed to update product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b-2 border-text-300 p-6 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="text-3xl">✏️</div>
+              <h2 className="text-2xl font-bold text-text-900">Edit Product</h2>
+            </div>
+            <p className="text-sm text-text-600">Update your product information</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-text-500 hover:text-text-900 text-3xl transition-colors font-bold"
+            disabled={loading}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-6">
+          {success && (
+            <div className="card bg-mint-50 border-2 border-mint-500 mb-6">
+              <div className="flex items-start gap-3">
+                <span className="text-4xl">✅</span>
+                <div>
+                  <h3 className="font-bold text-primary-900 text-lg mb-1">Product Updated Successfully!</h3>
+                  <p className="text-sm text-primary-800">Your product information has been updated.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="card bg-red-50 border-2 border-red-500 mb-6">
+              <div className="flex items-start gap-3">
+                <span className="text-4xl">⚠️</span>
+                <div>
+                  <h3 className="font-bold text-red-900 text-lg mb-1">Oops! Something went wrong</h3>
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Product Title */}
+            <div>
+              <label htmlFor="edit-title" className="label-field">
+                🥕 PRODUCT TITLE
+              </label>
+              <input
+                id="edit-title"
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g., Fresh Organic Tomatoes"
+                className="input-field"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label htmlFor="edit-description" className="label-field">
+                🥬 DESCRIPTION
+              </label>
+              <textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe your product, its quality, origin, etc."
+                className="input-field min-h-[120px] resize-none"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            {/* Price and Condition */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="edit-price" className="label-field">
+                  🥕 PRICE (₹ per kg)
+                </label>
+                <input
+                  id="edit-price"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="95"
+                  className="input-field"
+                  required
+                  min="0"
+                  step="0.01"
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-condition" className="label-field">
+                  🌶️ CONDITION
+                </label>
+                <select
+                  id="edit-condition"
+                  value={formData.condition}
+                  onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+                  className="input-field"
+                  required
+                  disabled={loading}
+                >
+                  <option value="new">New/Fresh</option>
+                  <option value="good">Good Quality</option>
+                  <option value="fair">Fair Condition</option>
+                  <option value="organic">Organic Certified</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Current Images Display */}
+            {product.images && product.images.length > 0 && (
+              <div>
+                <label className="label-field">
+                  🖼️ CURRENT IMAGES
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {product.images.map((image, index) => (
+                    <div key={index} className="relative aspect-square">
+                      <img 
+                        src={image} 
+                        alt={`Product ${index + 1}`}
+                        className="w-full h-full object-cover rounded-lg border-2 border-text-200"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-text-500 mt-2 flex items-start gap-2">
+                  <span>💡</span>
+                  <span>Image update functionality coming soon. Contact support to update product images.</span>
+                </p>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-outline flex-1 text-sm font-semibold uppercase tracking-widest"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-semibold uppercase tracking-widest"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="animate-spin text-xl">⏳</span>
+                    <span>Updating Product...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Update Product</span>
+                    <span className="text-xl">✅</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
