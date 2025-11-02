@@ -148,48 +148,48 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-background-50 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-background-50 flex items-center justify-center py-8 px-4">
       <div className="w-full max-w-2xl">
         {/* Logo and Back Link */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <Link 
             to="/" 
-            className="inline-flex items-center gap-2 text-primary-700 hover:text-primary-800 text-sm mb-4 transition-colors font-medium"
+            className="inline-flex items-center gap-2 text-primary-700 hover:text-primary-800 text-sm mb-6 transition-colors font-medium"
           >
             <span className="text-lg">←</span>
             <span>Back to Home</span>
           </Link>
-          <Link to="/" className="flex items-center justify-center gap-3 mb-3 hover:opacity-90 transition-opacity">
+          <Link to="/" className="flex items-center justify-center gap-3 mb-4 hover:opacity-90 transition-opacity">
             <div className="flex items-center gap-2 text-3xl">
-              <span>�</span>
+              <span>🌾</span>
               <span>🌽</span>
               <span>🥕</span>
             </div>
             <h1 className="text-3xl font-bold text-primary-700">FreshHarvest</h1>
           </Link>
-          <h2 className="text-2xl font-bold text-text-900 mb-1">Create Your Account</h2>
-          <p className="text-sm text-text-600">Join our farming community today!</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-text-900 mb-2">Create Your Account</h2>
+          <p className="text-sm md:text-base text-text-600">Join our farming community today!</p>
         </div>
 
         {/* Signup Card */}
-        <div className="card">
+        <div className="card bg-white shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name Field */}
             <div>
               <label htmlFor="name" className="label-field">
-                🍓 FULL NAME
+                👤 FULL NAME
               </label>
               <input
                 id="name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleInputChange("name", e.target.value)}
-                placeholder="John Doe"
+                placeholder="Enter your full name"
                 className={`input-field ${errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
                 disabled={isLoading}
               />
               {errors.name && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                <p className="text-red-600 text-xs mt-2 flex items-center gap-1">
                   <span>⚠️</span>
                   <span>{errors.name}</span>
                 </p>
@@ -197,22 +197,22 @@ export default function Signup() {
             </div>
 
             {/* Phone and Region Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="phone" className="label-field">
-                  🍋 PHONE NUMBER
+                  📱 PHONE NUMBER
                 </label>
                 <input
                   id="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="+92 300 1234567"
                   className={`input-field ${errors.phone ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
                   disabled={isLoading}
                 />
                 {errors.phone && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-red-600 text-xs mt-2 flex items-center gap-1">
                     <span>⚠️</span>
                     <span>{errors.phone}</span>
                   </p>
@@ -221,19 +221,19 @@ export default function Signup() {
 
               <div>
                 <label htmlFor="region" className="label-field">
-                  🍇 REGION / LOCATION
+                  📍 REGION / LOCATION
                 </label>
                 <input
                   id="region"
                   type="text"
                   value={formData.region}
                   onChange={(e) => handleInputChange("region", e.target.value)}
-                  placeholder="California, USA"
+                  placeholder="e.g., Karachi, Pakistan"
                   className={`input-field ${errors.region ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
                   disabled={isLoading}
                 />
                 {errors.region && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-red-600 text-xs mt-2 flex items-center gap-1">
                     <span>⚠️</span>
                     <span>{errors.region}</span>
                   </p>
@@ -243,42 +243,42 @@ export default function Signup() {
 
             {/* User Type Selection */}
             <div>
-              <label className="label-field mb-3">
-                🥦 ACCOUNT TYPE
+              <label className="label-field mb-4">
+                👥 ACCOUNT TYPE
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => handleInputChange("userType", "farmer")}
-                  className={`p-5 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${
                     formData.userType === "farmer"
-                      ? "border-primary-700 bg-primary-50 shadow-md"
-                      : "border-text-300 bg-white hover:border-primary-300 hover:bg-primary-50"
+                      ? "border-primary-700 bg-primary-50 shadow-lg"
+                      : "border-text-300 bg-white hover:border-primary-400 hover:bg-primary-50"
                   } ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                   disabled={isLoading}
                 >
-                  <div className="text-3xl mb-2">🌾</div>
-                  <div className="text-lg font-semibold text-text-900">Farmer</div>
-                  <div className="text-xs text-text-600 mt-1">I grow and sell products</div>
+                  <div className="text-4xl mb-3">🌾</div>
+                  <div className="text-lg font-bold text-text-900">Farmer/Seller</div>
+                  <div className="text-sm text-text-600 mt-2">I grow and sell farm products</div>
                 </button>
                 
                 <button
                   type="button"
                   onClick={() => handleInputChange("userType", "buyer")}
-                  className={`p-5 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${
                     formData.userType === "buyer"
-                      ? "border-primary-700 bg-primary-50 shadow-md"
-                      : "border-text-300 bg-white hover:border-primary-300 hover:bg-primary-50"
+                      ? "border-primary-700 bg-primary-50 shadow-lg"
+                      : "border-text-300 bg-white hover:border-primary-400 hover:bg-primary-50"
                   } ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                   disabled={isLoading}
                 >
-                  <div className="text-3xl mb-2">🍅</div>
-                  <div className="text-lg font-semibold text-text-900">Buyer</div>
-                  <div className="text-xs text-text-600 mt-1">I purchase farm products</div>
+                  <div className="text-4xl mb-3">🛒</div>
+                  <div className="text-lg font-bold text-text-900">Buyer</div>
+                  <div className="text-sm text-text-600 mt-2">I purchase farm products</div>
                 </button>
               </div>
               {errors.userType && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                <p className="text-red-600 text-xs mt-3 flex items-center gap-1">
                   <span>⚠️</span>
                   <span>{errors.userType}</span>
                 </p>
@@ -286,10 +286,10 @@ export default function Signup() {
             </div>
 
             {/* Password Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="password" className="label-field">
-                  🍉 PASSWORD
+                  🔐 PASSWORD
                 </label>
                 <div className="relative">
                   <input
@@ -297,14 +297,14 @@ export default function Signup() {
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Enter password (min 8 characters)"
                     className={`input-field pr-12 ${errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
                     disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-500 hover:text-text-700 text-lg transition-colors disabled:opacity-50"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-500 hover:text-text-700 text-xl transition-colors disabled:opacity-50"
                     disabled={isLoading}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
@@ -312,7 +312,7 @@ export default function Signup() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-red-600 text-xs mt-2 flex items-center gap-1">
                     <span>⚠️</span>
                     <span>{errors.password}</span>
                   </p>
@@ -321,7 +321,7 @@ export default function Signup() {
 
               <div>
                 <label htmlFor="confirmPassword" className="label-field">
-                  🍌 CONFIRM PASSWORD
+                  🔐 CONFIRM PASSWORD
                 </label>
                 <div className="relative">
                   <input
@@ -329,14 +329,14 @@ export default function Signup() {
                     type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Re-enter your password"
                     className={`input-field pr-12 ${errors.confirmPassword ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
                     disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-500 hover:text-text-700 text-lg transition-colors disabled:opacity-50"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-500 hover:text-text-700 text-xl transition-colors disabled:opacity-50"
                     disabled={isLoading}
                     aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                   >
@@ -344,7 +344,7 @@ export default function Signup() {
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-red-600 text-xs mt-2 flex items-center gap-1">
                     <span>⚠️</span>
                     <span>{errors.confirmPassword}</span>
                   </p>
@@ -363,30 +363,30 @@ export default function Signup() {
               />
               <label htmlFor="terms" className="text-sm text-text-700 cursor-pointer">
                 I agree to the{" "}
-                <a href="#" className="text-primary-700 font-semibold hover:text-primary-800 transition-colors underline">
+                <Link to="/terms-conditions" className="text-primary-700 font-semibold hover:text-primary-800 transition-colors underline" target="_blank">
                   Terms & Conditions
-                </a>{" "}
+                </Link>{" "}
                 and{" "}
-                <a href="#" className="text-primary-700 font-semibold hover:text-primary-800 transition-colors underline">
+                <Link to="/privacy-policy" className="text-primary-700 font-semibold hover:text-primary-800 transition-colors underline" target="_blank">
                   Privacy Policy
-                </a>
+                </Link>
               </label>
             </div>
 
             {/* Submit Button */}
             <button 
               type="submit" 
-              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base py-3 mt-2"
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
                   <span className="animate-spin text-xl">⏳</span>
-                  <span>Creating Account...</span>
+                  <span className="font-semibold">Creating Account...</span>
                 </>
               ) : (
                 <>
-                  <span>Create Account</span>
+                  <span className="font-semibold">Create Account</span>
                   <span className="text-xl">🌱</span>
                 </>
               )}
@@ -394,33 +394,33 @@ export default function Signup() {
           </form>
 
           {/* Divider */}
-          <div className="relative my-6">
+          <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-text-300"></div>
+              <div className="w-full border-t-2 border-text-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-3 bg-white text-text-600 font-medium">or</span>
+              <span className="px-4 bg-white text-text-600 font-semibold">OR</span>
             </div>
           </div>
 
           {/* Login Link */}
-          <div className="text-center space-y-3">
-            <p className="text-sm text-text-700">
+          <div className="text-center space-y-4">
+            <p className="text-sm text-text-700 font-medium">
               Already have an account?
             </p>
-            <Link to="/login" className="btn-outline w-full inline-block group">
-              <span>Login to Your Account</span>
+            <Link to="/login" className="btn-outline w-full inline-block group py-3">
+              <span className="font-semibold">Login to Your Account</span>
               <span className="inline-block ml-2 group-hover:translate-x-1 transition-transform">→</span>
             </Link>
           </div>
 
           {/* Admin Access Button - Footer */}
-          <div className="mt-6 pt-5 border-t border-text-200">
+          <div className="mt-8 pt-6 border-t-2 border-text-200">
             <Link
               to="/admin-login"
-              className="w-full py-2.5 px-4 text-xs text-text-600 hover:text-text-800 hover:bg-background-50 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 text-sm text-text-600 hover:text-text-900 hover:bg-background-100 rounded-lg transition-all font-medium flex items-center justify-center gap-2 border border-transparent hover:border-text-300"
             >
-              <span>🥬</span>
+              <span>🔑</span>
               <span>Are you an Admin?</span>
             </Link>
           </div>

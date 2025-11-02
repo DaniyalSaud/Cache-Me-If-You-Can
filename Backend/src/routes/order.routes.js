@@ -10,6 +10,7 @@ import {
   getOrdersByUser,
   getOrdersBySeller,
   //holdInEscrow,
+  approveOrder,
   releaseEscrow,
   refundOrder,
   //logOrderAction,
@@ -41,12 +42,14 @@ router.get("/:id", verifyJWT, getOrderById); // controller checks ownership/role
 // TESTED SUCCESS 
 router.post("/:id/cancel", verifyJWT, authorizeRoles("buyer"), cancelOrder);
 
-// Seller actions: hold/release escrow, update shipping
+// Admin approves order (required before farmer can accept)
+router.post("/:id/approve", verifyJWT, authorizeRoles("admin"), approveOrder);
 
-     //router.post("/:id/hold", verifyJWT, authorizeRoles("seller"), holdInEscrow);
-
+// Seller/Admin actions: accept order (farmer after admin approval), mark as shipped
 router.post("/:id/release", verifyJWT, authorizeRoles("seller", "admin"), releaseEscrow);
-router.post("/:id/refund", verifyJWT, authorizeRoles("seller", "admin"), refundOrder);
+
+// Admin only: cancel/refund order (only before shipping)
+router.post("/:id/refund", verifyJWT, authorizeRoles("admin"), refundOrder);
 
 // Disputes
 router.post("/:id/dispute", verifyJWT, authorizeRoles("buyer"), raiseDispute);

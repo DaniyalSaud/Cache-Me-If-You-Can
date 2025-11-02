@@ -252,16 +252,26 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 // TESTED WORKING
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { username, phoneno } = req.body;
+  const { username, phoneno, currentPassword } = req.body;
   const { region, phonenotochange } = req.body;
 
   if (!(username || phoneno)) {
     throw new APIError(400, "All fields are required");
   }
 
+  // Verify current password before updating
+  if (currentPassword) {
+    const user = await User.findById(req.user?._id);
+    const isPasswordCorrect = await user.isPasswordcorrect(currentPassword);
+    
+    if (!isPasswordCorrect) {
+      throw new APIError(400, "Current password is incorrect");
+    }
+  }
+
   const checkUser = await User.findOne({
     $or: [{ username }, { phoneno: phonenotochange }],
-    _id: { $ne: mongoose.Types.ObjectId(req.user?._id) },
+    _id: { $ne: req.user?._id },
   });
 
   if (checkUser) {

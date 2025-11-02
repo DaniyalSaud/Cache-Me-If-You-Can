@@ -72,6 +72,33 @@ const orderSchema = new Schema(
     trackingNumber: {
       type: String,
     },
+    adminApproved: {
+      type: Boolean,
+      default: false,
+    },
+    adminApprovedAt: {
+      type: Date,
+    },
+    adminApprovedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    acceptedAt: {
+      type: Date,
+    },
+    shippedAt: {
+      type: Date,
+    },
+    cancelledAt: {
+      type: Date,
+    },
+    cancelledBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    cancellationReason: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

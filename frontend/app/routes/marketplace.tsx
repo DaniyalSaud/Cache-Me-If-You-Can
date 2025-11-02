@@ -32,7 +32,6 @@ type ProduceItem = {
   price: string;
   unit: string;
   origin: string;
-  availability: string;
   badges: string[];
   category: "Leafy Greens" | "Root" | "Fruit" | "Legume" | "Herb";
   isBestSeller?: boolean;
@@ -60,7 +59,7 @@ export default function Marketplace() {
   // Handle add to cart
   const handleAddToCart = (item: ProduceItem) => {
     const productId = item.id;
-    const price = parseFloat(item.price.replace('₹', ''));
+    const price = parseFloat(item.price.replace('Rs ', ''));
     const image = item.emoji.startsWith('img:') ? item.emoji.substring(4) : undefined;
     
     addToCart({
@@ -147,7 +146,7 @@ export default function Marketplace() {
         ? `img:${product.images[0]}` // Use special prefix to indicate it's an image URL
         : "🌽", // Default emoji if no image
       description: product.description,
-      price: `₹${product.price}`,
+      price: `Rs ${product.price}`,
       unit: "per 100kg batch",
       origin: "From Farmer", // Can be enhanced with seller info
       availability: product.verified ? "Verified ✓" : "Pending Verification",
@@ -231,13 +230,11 @@ export default function Marketplace() {
                 <span>🌽</span>
                 <span>🥕</span>
               </div>
-              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>FreshHarvest</h1>
+              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-2xl' : 'text-4xl'}`}>FreshHarvest</h1>
             </Link>
             <nav className="flex items-center gap-3">
-              <Link to="/" className={`text-white/90 hover:text-white transition-colors font-medium ${isScrolled ? 'text-xs' : 'text-sm'}`}>
-                Home
-              </Link>
-              <Link to="/cart" className={`relative bg-white text-primary-700 hover:bg-gray-50 rounded-lg font-semibold flex items-center gap-2 transition-all ${isScrolled ? 'text-[10px] px-3 py-1.5' : 'text-xs px-4 py-2'}`}>
+            
+              <Link to="/cart" className={`relative bg-white text-primary-700 hover:bg-gray-50 rounded-lg font-semibold flex items-center gap-2 transition-all ${isScrolled ? 'text-sm px-3 py-1.5' : 'text-lg px-4 py-2'}`}>
                 🛒 Cart
                 {getTotalItems() > 0 && (
                   <span className="absolute -top-2 -right-2 bg-accent-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
@@ -245,7 +242,7 @@ export default function Marketplace() {
                   </span>
                 )}
               </Link>
-              <button onClick={handleLogout} className={`bg-white/10 text-white hover:bg-white/20 rounded-lg font-semibold uppercase tracking-widest transition-all ${isScrolled ? 'text-[10px] px-3 py-1.5' : 'text-xs px-4 py-2'}`}>
+              <button onClick={handleLogout} className={`bg-white/10 text-white hover:bg-white/20 rounded-lg font-semibold uppercase tracking-widest transition-all ${isScrolled ? 'text-sm px-3 py-1.5' : 'text-lg px-4 py-2'}`}>
                 🚪 LOGOUT
               </button>
             </nav>
@@ -357,7 +354,7 @@ export default function Marketplace() {
               </button>
             </div>
             <div className="flex items-center justify-between text-xs text-text-500">
-              <span>💡 Try searching: "tomato", "organic", "Maharashtra"</span>
+              <span>💡 Try searching: "tomato", "organic", "Multan"</span>
               <span>{filteredProduce.length} items found ({apiProducts.length} from farmers)</span>
             </div>
           </div>
@@ -455,10 +452,7 @@ export default function Marketplace() {
                       <dt className="uppercase text-[0.65rem] font-semibold tracking-widest text-text-500">Origin</dt>
                       <dd className="font-medium text-text-800">{item.origin}</dd>
                     </div>
-                    <div className="text-right">
-                      <dt className="uppercase text-[0.65rem] font-semibold tracking-widest text-text-500">Availability</dt>
-                      <dd className="font-medium text-text-800">{item.availability}</dd>
-                    </div>
+                  
                   </dl>
 
                   <div className="mt-auto flex flex-col gap-3">
@@ -480,21 +474,77 @@ export default function Marketplace() {
           )}
         </div>
 
-        <aside className="card bg-white flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-text-900">Need bulk quantities?</h3>
-            <p className="text-sm text-text-600">Partner with FreshHarvest logistics for cold-chain deliveries across India.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-primary text-xs font-semibold uppercase tracking-widest">
-              Contact Sales Team
-            </button>
-            <button type="button" className="btn-outline text-xs font-semibold uppercase tracking-widest">
-              Download Product Sheet
-            </button>
-          </div>
-        </aside>
       </section>
+
+      {/* Footer */}
+      <footer className="bg-primary-800 text-white mt-16">
+        <div className="container-page py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Brand Section */}
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-3xl">🌾</span>
+                <h3 className="text-2xl font-bold">FreshHarvest</h3>
+              </div>
+              <p className="text-sm text-white/80 leading-relaxed">
+                Connecting farmers with buyers for fresh, sustainable, and quality produce across Pakistan.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/" className="text-white/80 hover:text-white transition-colors">Home</Link></li>
+                <li><Link to="/marketplace" className="text-white/80 hover:text-white transition-colors">Marketplace</Link></li>
+                <li><Link to="/cart" className="text-white/80 hover:text-white transition-colors">Shopping Cart</Link></li>
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="text-white/80 hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="#" className="text-white/80 hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="#" className="text-white/80 hover:text-white transition-colors">FAQs</a></li>
+                <li><a href="#" className="text-white/80 hover:text-white transition-colors">Terms of Service</a></li>
+              </ul>
+            </div>
+
+            {/* Contact Info */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Contact</h4>
+              <ul className="space-y-3 text-sm text-white/80">
+                <li className="flex items-center gap-2">
+                  <span>📧</span>
+                  <span>support@freshharvest.pk</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span>📱</span>
+                  <span>+92 300 1234567</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span>📍</span>
+                  <span>Karachi, Pakistan</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="pt-8 border-t border-white/20">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/70">
+              <p>© 2025 FreshHarvest. All rights reserved.</p>
+              <div className="flex items-center gap-6">
+                <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                <Link to="/terms-conditions" className="hover:text-white transition-colors">Terms & Conditions</Link>
+                <Link to="/privacy-policy" className="hover:text-white transition-colors">Cookie Policy</Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

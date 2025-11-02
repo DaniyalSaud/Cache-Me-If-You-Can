@@ -24,13 +24,28 @@ type Product = {
 };
 
 type Order = {
-  id: string;
-  product: string;
-  quantity: string;
-  buyer: string;
-  status: "pending" | "processing" | "completed";
-  amount: string;
-  date: string;
+  _id: string;
+  buyerId: {
+    _id: string;
+    username: string;
+    phoneno: string;
+  };
+  products: Array<{
+    productId: {
+      _id: string;
+      title: string;
+      images: string[];
+    };
+    quantity: number;
+    price: number;
+    sellerId: string;
+  }>;
+  totalAmount: number;
+  status: "pending" | "processing" | "shipped" | "delivered" | "completed" | "cancelled";
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  adminApproved: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export default function FarmerDashboard() {
@@ -47,20 +62,27 @@ export default function FarmerDashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "products" | "orders" | "tools" | "chatbot">("overview");
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showEditProductModal, setShowEditProductModal] = useState(false);
+  const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [revenueStats, setRevenueStats] = useState({
+    totalRevenue: 0,
+    totalOrders: 0,
+    pendingOrders: 0,
+  });
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
-  // Fetch products from API
   const fetchProducts = async () => {
     try {
       console.log("🔄 Fetching products from API...");
       setLoadingProducts(true);
       setProductsError(null);
       
-      // Get sellerId from localStorage
       const sellerId = localStorage.getItem('userId');
       
       if (!sellerId) {
@@ -69,7 +91,6 @@ export default function FarmerDashboard() {
       
       console.log("👤 Fetching products for seller:", sellerId);
       
-      // Use POST request to getProducts endpoint with sellerId in body
       const response = await apiRequest(API_ENDPOINTS.PRODUCTS, {
         method: 'POST',
         body: JSON.stringify({ sellerId }),
@@ -79,7 +100,6 @@ export default function FarmerDashboard() {
       console.log("📦 Response data:", response.data);
       console.log("📦 Products array:", response.data?.products);
       
-      // The backend returns products in response.data.products
       if (response.data && response.data.products) {
         console.log(`✅ Setting ${response.data.products.length} products`);
         setProducts(response.data.products);
@@ -96,13 +116,43 @@ export default function FarmerDashboard() {
     }
   };
 
+  // Fetch orders and revenue stats
+  const fetchOrders = async () => {
+    try {
+      console.log("🔄 Fetching orders from API...");
+      setLoadingOrders(true);
+      
+      const response = await apiRequest(`${API_ENDPOINTS.ORDERS}/seller`, {
+        method: 'GET',
+      });
+      
+      console.log("📦 Orders Response:", response);
+      
+      if (response.data) {
+        setOrders(response.data.orders || []);
+        if (response.data.stats) {
+          setRevenueStats({
+            totalRevenue: response.data.stats.totalRevenue || 0,
+            totalOrders: response.data.stats.totalOrders || 0,
+            pendingOrders: response.data.stats.pendingOrders || 0,
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error("❌ Error fetching orders:", error);
+      setOrders([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchProducts();
+      fetchOrders();
     }
   }, [isAuthenticated]);
 
-  // Scroll detection for navbar height
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -114,25 +164,19 @@ export default function FarmerDashboard() {
 
   const handleLogout = async () => {
     try {
-      // Call the backend logout API
       await apiRequest(API_ENDPOINTS.LOGOUT, {
         method: 'POST',
       });
       
-      // Clear local storage
       localStorage.clear();
       
-      // Redirect to home page
       window.location.href = '/';
     } catch (error) {
       console.error("Logout error:", error);
-      // Even if API call fails, clear local storage and redirect
       localStorage.clear();
       window.location.href = '/';
     }
   };
-
-  // Handle delete product
   const handleDeleteProduct = async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
       return;
@@ -147,7 +191,6 @@ export default function FarmerDashboard() {
 
       console.log("✅ Product deleted successfully:", response);
       
-      // Refresh products list
       await fetchProducts();
       
       alert('Product deleted successfully!');
@@ -157,29 +200,86 @@ export default function FarmerDashboard() {
     }
   };
 
-  // Handle edit product click
   const handleEditProduct = (product: Product) => {
     console.log("✏️ Editing product:", product);
     setSelectedProduct(product);
     setShowEditProductModal(true);
   };
 
-  const [orders] = useState<Order[]>([]);
+  // Handle accepting order (change status to processing)
+  const handleAcceptOrder = async (orderId: string, order: Order) => {
+    // Check if order is cancelled
+    if (order.status === 'cancelled') {
+      alert('❌ Cannot accept a cancelled order');
+      return;
+    }
+
+    // Check if admin has approved (only for sellers)
+    const userRole = localStorage.getItem('userRole');
+    if (userRole === 'seller' && !order.adminApproved) {
+      alert('⚠️ This order must be approved by admin before you can accept it');
+      return;
+    }
+
+    if (!confirm('Accept this order and begin processing?')) {
+      return;
+    }
+
+    try {
+      console.log("✅ Accepting order:", orderId);
+      
+      // Release escrow to mark order as accepted/processing
+      const response = await apiRequest(`${API_ENDPOINTS.ORDERS}/${orderId}/release`, {
+        method: 'POST',
+      });
+
+      console.log("✅ Order accepted successfully:", response);
+      
+      // Refresh orders
+      await fetchOrders();
+      
+      alert('✅ Order accepted! The buyer will be notified.');
+    } catch (error: any) {
+      console.error("❌ Error accepting order:", error);
+      alert(error.message || 'Failed to accept order');
+    }
+  };
+
+  // Handle completing order (mark as shipped/completed)
+  const handleCompleteOrder = async (orderId: string) => {
+    if (!confirm('Mark this order as shipped/completed?')) {
+      return;
+    }
+
+    try {
+      console.log("📦 Completing order:", orderId);
+      
+      // You may need to create a specific endpoint for this, or use the release endpoint
+      const response = await apiRequest(`${API_ENDPOINTS.ORDERS}/${orderId}/release`, {
+        method: 'POST',
+      });
+
+      console.log("✅ Order marked as completed:", response);
+      
+      // Refresh orders
+      await fetchOrders();
+      
+      alert('Order marked as shipped! Payment will be released.');
+    } catch (error: any) {
+      console.error("❌ Error completing order:", error);
+      alert(error.message || 'Failed to complete order');
+    }
+  };
 
   const stats = {
     totalProducts: products.length,
     activeProducts: products.filter(p => p.verified).length,
-    lowStock: 0, // Can be calculated based on inventory when implemented
-    pendingOrders: orders.filter(o => o.status === "pending").length,
-    totalRevenue: "₹0",
-    monthlyRevenue: "₹0"
+    lowStock: 0, 
+    pendingOrders: revenueStats.pendingOrders,
+    totalRevenue: `Rs ${revenueStats.totalRevenue.toLocaleString()}`,
+    monthlyRevenue: `Rs ${revenueStats.totalRevenue.toLocaleString()}`
   };
 
-  // Debug stats calculation
-  console.log("📊 Current products state:", products);
-  console.log("📊 Stats calculation:", stats);
-
-  // Show authentication message if not logged in as seller
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background-50 flex items-center justify-center px-4">
@@ -240,7 +340,7 @@ export default function FarmerDashboard() {
                 <span>🚜</span>
                 <span>🌱</span>
               </div>
-              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>FreshHarvest Farmer</h1>
+              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-2xl' : 'text-3xl'}`}>FreshHarvest Farmer</h1>
             </Link>
             <nav className="flex items-center gap-3">
              
@@ -299,13 +399,13 @@ export default function FarmerDashboard() {
           <div className="card bg-white shadow-lg border-l-4 border-green-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-text-600 uppercase tracking-wider font-semibold">Monthly Revenue</p>
+                <p className="text-sm text-text-600 uppercase tracking-wider font-semibold">Total Revenue</p>
                 <p className="text-3xl font-bold text-text-900 mt-2">{stats.monthlyRevenue}</p>
               </div>
               <div className="text-4xl">💰</div>
             </div>
             <div className="mt-3 text-xs text-text-600">
-              Total Revenue: {stats.totalRevenue}
+              Your Total Earnings
             </div>
           </div>
         </div>
@@ -346,30 +446,49 @@ export default function FarmerDashboard() {
                   <span>📋</span>
                   <span>Recent Orders</span>
                 </h2>
-                <div className="space-y-3">
-                  {orders.slice(0, 3).map((order) => (
-                    <div key={order.id} className="p-4 bg-background-50 rounded-lg border border-text-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-text-900">{order.id}</span>
-                        <span className={`text-xs px-3 py-1 rounded-full border font-semibold uppercase ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-text-700">{order.product} - {order.quantity}</p>
-                      <p className="text-sm text-text-600">Buyer: {order.buyer}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm text-text-500">{order.date}</span>
-                        <span className="font-bold text-primary-700">{order.amount}</span>
-                      </div>
+                {loadingOrders ? (
+                  <div className="text-center py-8">
+                    <div className="text-3xl mb-2 animate-pulse">📦</div>
+                    <p className="text-sm text-text-600">Loading orders...</p>
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-3xl mb-2">📭</div>
+                    <p className="text-sm text-text-600">No orders yet</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-3">
+                      {orders.slice(0, 3).map((order) => (
+                        <div key={order._id} className="p-4 bg-background-50 rounded-lg border border-text-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-text-900">#{order._id.slice(-6).toUpperCase()}</span>
+                            <span className={`text-xs px-3 py-1 rounded-full border font-semibold uppercase ${getStatusColor(order.status)}`}>
+                              {order.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-text-700">
+                            {order.products.map(p => p.productId.title).join(", ")}
+                          </p>
+                          <p className="text-sm text-text-600 flex items-center gap-2">
+                            <span>👤</span>
+                            <span>Buyer: {order.buyerId.username}</span>
+                            <span className="text-xs text-text-400">({order.buyerId.phoneno})</span>
+                          </p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-sm text-text-500">{new Date(order.createdAt).toLocaleDateString()}</span>
+                            <span className="font-bold text-primary-700">Rs {order.totalAmount.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <button className="btn-outline w-full mt-4 text-sm" onClick={() => setActiveTab("orders")}>
-                  View All Orders
-                </button>
+                    <button className="btn-outline w-full mt-4 text-sm" onClick={() => setActiveTab("orders")}>
+                      View All Orders
+                    </button>
+                  </>
+                )}
               </div>
 
-              {/* Quick Actions */}
               <div className="card bg-white shadow-lg">
                 <h2 className="text-xl font-bold text-text-900 mb-4 flex items-center gap-2">
                   <span>⚡</span>
@@ -387,15 +506,18 @@ export default function FarmerDashboard() {
                     <span>♻️</span>
                     <span>Report Crop Waste</span>
                   </Link>
-                  <button className="btn-outline w-full text-sm flex items-center justify-center gap-2">
-                    <span>📦</span>
-                    <span>Manage Inventory</span>
+                  <button 
+                    onClick={() => setShowGuideModal(true)}
+                    className="btn-outline w-full text-sm flex items-center justify-center gap-2"
+                  >
+                    <span>📖</span>
+                    <span>View Guide</span>
                   </button>
-                  <button className="btn-outline w-full text-sm flex items-center justify-center gap-2">
-                    <span>💬</span>
-                    <span>Contact Support</span>
-                  </button>
-                  <button className="btn-outline w-full text-sm flex items-center justify-center gap-2">
+                  
+                  <button 
+                    onClick={() => setShowAccountSettingsModal(true)}
+                    className="btn-outline w-full text-sm flex items-center justify-center gap-2"
+                  >
                     <span>⚙️</span>
                     <span>Account Settings</span>
                   </button>
@@ -504,42 +626,150 @@ export default function FarmerDashboard() {
               <span>📦</span>
               <span>Order Management</span>
             </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-background-100">
-                  <tr className="text-left text-sm text-text-700 uppercase tracking-wider">
-                    <th className="px-4 py-3 font-semibold">Order ID</th>
-                    <th className="px-4 py-3 font-semibold">Product</th>
-                    <th className="px-4 py-3 font-semibold">Buyer</th>
-                    <th className="px-4 py-3 font-semibold">Amount</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Date</th>
-                    <th className="px-4 py-3 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-text-200">
-                  {orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-background-50 transition-colors">
-                      <td className="px-4 py-3 font-semibold text-text-900">{order.id}</td>
-                      <td className="px-4 py-3 text-text-700">{order.product}</td>
-                      <td className="px-4 py-3 text-text-700">{order.buyer}</td>
-                      <td className="px-4 py-3 font-semibold text-primary-700">{order.amount}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs px-3 py-1 rounded-full border font-semibold uppercase ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text-600">{order.date}</td>
-                      <td className="px-4 py-3">
-                        <button className="text-xs px-3 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors font-semibold">
-                          View
+            
+            {loadingOrders ? (
+              <div className="text-center py-12">
+                <div className="text-5xl mb-4 animate-pulse">📦</div>
+                <p className="text-text-600">Loading orders...</p>
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-5xl mb-4">📭</div>
+                <h3 className="text-xl font-semibold text-text-900 mb-2">No orders yet</h3>
+                <p className="text-text-600">Orders from buyers will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <div key={order._id} className="p-4 bg-background-50 rounded-lg border border-text-200 hover:shadow-md transition-shadow">
+                    {/* Order Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-text-500">ORDER ID:</span>
+                          <span className="text-sm font-semibold text-text-900">#{order._id.slice(-8).toUpperCase()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs px-3 py-1 rounded-full border font-semibold uppercase ${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </span>
+                          <span className={`text-xs px-3 py-1 rounded-full border font-semibold uppercase ${
+                            order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 border-green-300' :
+                            order.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                            'bg-red-100 text-red-800 border-red-300'
+                          }`}>
+                            Payment: {order.paymentStatus}
+                          </span>
+                          {order.status === 'pending' && (
+                            <span className={`text-xs px-3 py-1 rounded-full border font-semibold uppercase ${
+                              order.adminApproved ? 'bg-green-100 text-green-800 border-green-300' : 'bg-orange-100 text-orange-800 border-orange-300'
+                            }`}>
+                              {order.adminApproved ? '✓ Admin Approved' : '⏳ Awaiting Admin Approval'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-primary-700">Rs {order.totalAmount.toLocaleString()}</p>
+                        <p className="text-xs text-text-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+
+                    {/* Buyer Information */}
+                    <div className="card bg-blue-50 border border-blue-200 mb-3">
+                      <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                        <span>👤</span>
+                        <span>Buyer Information</span>
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-blue-700 font-semibold">Name:</span>
+                          <span className="ml-2 text-blue-900">{order.buyerId.username}</span>
+                        </div>
+                        <div>
+                          <span className="text-blue-700 font-semibold">Phone:</span>
+                          <a href={`tel:${order.buyerId.phoneno}`} className="ml-2 text-blue-900 hover:text-blue-700 underline">
+                            {order.buyerId.phoneno}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Products List */}
+                    <div className="mb-3">
+                      <h4 className="font-semibold text-text-900 mb-2">Products:</h4>
+                      <div className="space-y-2">
+                        {order.products.map((product, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border border-text-200">
+                            <div className="flex items-center gap-3">
+                              {product.productId.images && product.productId.images.length > 0 && (
+                                <img 
+                                  src={product.productId.images[0]} 
+                                  alt={product.productId.title}
+                                  className="w-12 h-12 object-cover rounded"
+                                />
+                              )}
+                              <div>
+                                <p className="font-semibold text-text-900">{product.productId.title}</p>
+                                <p className="text-sm text-text-600">Quantity: {product.quantity} × Rs {product.price}</p>
+                              </div>
+                            </div>
+                            <p className="font-bold text-primary-700">Rs {(product.quantity * product.price).toLocaleString()}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2 pt-3 border-t border-text-200">
+                      {order.status === 'pending' && (
+                        <>
+                          {!order.adminApproved && (
+                            <div className="text-xs px-4 py-2 bg-orange-50 text-orange-700 rounded-lg border border-orange-300 flex items-center gap-1">
+                              <span>⏳</span>
+                              <span>Waiting for admin approval</span>
+                            </div>
+                          )}
+                          {order.adminApproved && (
+                            <button 
+                              onClick={() => handleAcceptOrder(order._id, order)}
+                              className="text-xs px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-1"
+                            >
+                              <span>✅</span>
+                              <span>Accept Order</span>
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {order.status === 'processing' && (
+                        <button 
+                          onClick={() => handleCompleteOrder(order._id)}
+                          className="text-xs px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-1"
+                        >
+                          <span>📦</span>
+                          <span>Mark as Shipped</span>
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      )}
+                      {order.status === 'cancelled' && (
+                        <div className="text-xs px-4 py-2 bg-red-50 text-red-700 rounded-lg border border-red-300 flex items-center gap-1">
+                          <span>❌</span>
+                          <span>Order Cancelled</span>
+                        </div>
+                      )}
+                      {order.status !== 'cancelled' && (
+                        <a 
+                          href={`tel:${order.buyerId.phoneno}`}
+                          className="text-xs px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-semibold flex items-center gap-1"
+                        >
+                          <span>📞</span>
+                          <span>Call Buyer</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -636,29 +866,7 @@ export default function FarmerDashboard() {
           </div>
         )}
 
-        {/* Help Section */}
-        <div className="card bg-mint-50 border-mint-200">
-          <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-text-900 mb-1 flex items-center gap-2">
-                <span>💬</span>
-                <span>Need Help?</span>
-              </h3>
-              <p className="text-sm text-text-600">
-                Our farmer support team is here to help you grow your business.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button className="btn-primary text-xs font-semibold uppercase tracking-widest">
-                Contact Support
-              </button>
-              <button className="btn-outline text-xs font-semibold uppercase tracking-widest">
-                View Guide
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+       </section>
 
       {/* Add Product Modal */}
       {showAddProductModal && (
@@ -684,6 +892,22 @@ export default function FarmerDashboard() {
             setShowEditProductModal(false);
             setSelectedProduct(null);
           }}
+        />
+      )}
+
+      {/* Account Settings Modal */}
+      {showAccountSettingsModal && (
+        <AccountSettingsModal 
+          isOpen={showAccountSettingsModal}
+          onClose={() => setShowAccountSettingsModal(false)}
+        />
+      )}
+
+      {/* Guide Modal */}
+      {showGuideModal && (
+        <GuideModal 
+          isOpen={showGuideModal}
+          onClose={() => setShowGuideModal(false)}
         />
       )}
     </div>
@@ -1292,7 +1516,7 @@ function EditProductModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="edit-price" className="label-field">
-                  🥕 PRICE (₹ per kg)
+                  🥕 PRICE (Rs per kg)
                 </label>
                 <input
                   id="edit-price"
@@ -1386,4 +1610,903 @@ function EditProductModal({
     </div>
   );
 }
+
+// Account Settings Modal Component
+function AccountSettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [activeSection, setActiveSection] = useState<'profile' | 'password'>('profile');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Profile update form state
+  const [profileData, setProfileData] = useState({
+    username: '',
+    phoneno: '',
+    region: '',
+    currentPassword: '',
+  });
+
+  // Password change form state
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  // Load current user data
+  useEffect(() => {
+    if (isOpen) {
+      const username = localStorage.getItem('username') || '';
+      const phoneno = localStorage.getItem('phoneno') || '';
+      const region = localStorage.getItem('region') || '';
+      setProfileData(prev => ({ ...prev, username, phoneno, region }));
+    }
+  }, [isOpen]);
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!profileData.username || !profileData.phoneno || !profileData.region) {
+      setError('All profile fields are required');
+      return;
+    }
+
+    if (!profileData.currentPassword) {
+      setError('Please enter your current password to update profile');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Update profile with password verification
+      const response = await apiRequest(API_ENDPOINTS.UPDATE_ACCOUNT, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          username: profileData.username,
+          phonenotochange: profileData.phoneno,
+          region: profileData.region,
+          currentPassword: profileData.currentPassword,
+        }),
+      });
+
+      // Update localStorage
+      localStorage.setItem('username', profileData.username);
+      localStorage.setItem('phoneno', profileData.phoneno);
+      localStorage.setItem('region', profileData.region);
+
+      setSuccess('Profile updated successfully!');
+      setProfileData(prev => ({ ...prev, currentPassword: '' }));
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error: any) {
+      setError(error.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!passwordData.oldPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setError('All password fields are required');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setError('New password must be at least 6 characters long');
+      return;
+    }
+
+    if (passwordData.oldPassword === passwordData.newPassword) {
+      setError('New password must be different from old password');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await apiRequest(API_ENDPOINTS.CHANGE_PASSWORD, {
+        method: 'POST',
+        body: JSON.stringify({
+          oldPassword: passwordData.oldPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      });
+
+      setSuccess('Password changed successfully!');
+      setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+      
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (error: any) {
+      setError(error.message || 'Failed to change password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full my-8">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-text-900 flex items-center gap-2">
+              <span>⚙️</span>
+              <span>Account Settings</span>
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-text-600 hover:text-text-900 transition-colors text-2xl"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6 border-b border-border-200">
+            <button
+              onClick={() => {
+                setActiveSection('profile');
+                setError(null);
+                setSuccess(null);
+              }}
+              className={`px-4 py-2 font-semibold transition-colors ${
+                activeSection === 'profile'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-text-600 hover:text-text-900'
+              }`}
+            >
+              👤 Profile Information
+            </button>
+            <button
+              onClick={() => {
+                setActiveSection('password');
+                setError(null);
+                setSuccess(null);
+              }}
+              className={`px-4 py-2 font-semibold transition-colors ${
+                activeSection === 'password'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-text-600 hover:text-text-900'
+              }`}
+            >
+              🔐 Change Password
+            </button>
+          </div>
+
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+              {success}
+            </div>
+          )}
+
+          {/* Profile Update Section */}
+          {activeSection === 'profile' && (
+            <form onSubmit={handleProfileUpdate}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-text-700 mb-2">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={profileData.username}
+                    onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
+                    className="input-field"
+                    placeholder="Enter your username"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-text-700 mb-2">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={profileData.phoneno}
+                    onChange={(e) => setProfileData({ ...profileData, phoneno: e.target.value })}
+                    className="input-field"
+                    placeholder="Enter your phone number"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-text-700 mb-2">
+                    Region
+                  </label>
+                  <select
+                    value={profileData.region}
+                    onChange={(e) => setProfileData({ ...profileData, region: e.target.value })}
+                    className="input-field"
+                    disabled={loading}
+                  >
+                    <option value="">Select your region</option>
+                    <option value="Punjab">Punjab</option>
+                    <option value="Sindh">Sindh</option>
+                    <option value="KPK">Khyber Pakhtunkhwa</option>
+                    <option value="Balochistan">Balochistan</option>
+                    <option value="Gilgit-Baltistan">Gilgit-Baltistan</option>
+                    <option value="AJK">Azad Jammu & Kashmir</option>
+                  </select>
+                </div>
+
+                <div className="pt-4 border-t border-border-200">
+                  <label className="block text-sm font-semibold text-text-700 mb-2">
+                    Current Password *
+                  </label>
+                  <input
+                    type="password"
+                    value={profileData.currentPassword}
+                    onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
+                    className="input-field"
+                    placeholder="Enter your current password to confirm changes"
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-text-500 mt-1">
+                    Required to verify it's you making these changes
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="btn-outline flex-1"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Update Profile</span>
+                      <span>✅</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Password Change Section */}
+          {activeSection === 'password' && (
+            <form onSubmit={handlePasswordChange}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-text-700 mb-2">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.oldPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
+                    className="input-field"
+                    placeholder="Enter your current password"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-text-700 mb-2">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    className="input-field"
+                    placeholder="Enter your new password (min 6 characters)"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-text-700 mb-2">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    className="input-field"
+                    placeholder="Confirm your new password"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    <strong>Password Requirements:</strong>
+                  </p>
+                  <ul className="text-xs text-blue-600 mt-1 space-y-1 list-disc list-inside">
+                    <li>At least 6 characters long</li>
+                    <li>Must be different from your current password</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="btn-outline flex-1"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>Changing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Change Password</span>
+                      <span>🔒</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Guide Modal Component
+function GuideModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [activeGuideSection, setActiveGuideSection] = useState<'getting-started' | 'products' | 'orders' | 'tools' | 'faq'>('getting-started');
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6 sticky top-0 bg-white pb-4 border-b border-border-200">
+            <h2 className="text-2xl font-bold text-text-900 flex items-center gap-2">
+              <span>📖</span>
+              <span>FreshHarvest User Guide</span>
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-text-600 hover:text-text-900 transition-colors text-2xl"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="flex gap-2 mb-6 border-b border-border-200 overflow-x-auto pb-2">
+            <button
+              onClick={() => setActiveGuideSection('getting-started')}
+              className={`px-4 py-2 font-semibold whitespace-nowrap transition-colors ${
+                activeGuideSection === 'getting-started'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-text-600 hover:text-text-900'
+              }`}
+            >
+              🚀 Getting Started
+            </button>
+            <button
+              onClick={() => setActiveGuideSection('products')}
+              className={`px-4 py-2 font-semibold whitespace-nowrap transition-colors ${
+                activeGuideSection === 'products'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-text-600 hover:text-text-900'
+              }`}
+            >
+              🥕 Managing Products
+            </button>
+            <button
+              onClick={() => setActiveGuideSection('orders')}
+              className={`px-4 py-2 font-semibold whitespace-nowrap transition-colors ${
+                activeGuideSection === 'orders'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-text-600 hover:text-text-900'
+              }`}
+            >
+              📦 Orders & Sales
+            </button>
+            <button
+              onClick={() => setActiveGuideSection('tools')}
+              className={`px-4 py-2 font-semibold whitespace-nowrap transition-colors ${
+                activeGuideSection === 'tools'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-text-600 hover:text-text-900'
+              }`}
+            >
+              🛠️ Tools & Features
+            </button>
+            <button
+              onClick={() => setActiveGuideSection('faq')}
+              className={`px-4 py-2 font-semibold whitespace-nowrap transition-colors ${
+                activeGuideSection === 'faq'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-text-600 hover:text-text-900'
+              }`}
+            >
+              ❓ FAQ
+            </button>
+          </div>
+
+          {/* Content Sections */}
+          <div className="space-y-6">
+            {/* Getting Started */}
+            {activeGuideSection === 'getting-started' && (
+              <div className="space-y-4">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h3 className="text-lg font-bold text-green-900 mb-2 flex items-center gap-2">
+                    <span>👋</span>
+                    <span>Welcome to FreshHarvest!</span>
+                  </h3>
+                  <p className="text-green-700">
+                    FreshHarvest connects farmers directly with buyers, eliminating middlemen and ensuring fair prices for your produce.
+                  </p>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-3 flex items-center gap-2">
+                    <span>📋</span>
+                    <span>Dashboard Overview</span>
+                  </h4>
+                  <ul className="space-y-2 text-text-700">
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span><strong>Overview Tab:</strong> View your sales statistics, recent activity, and quick actions</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span><strong>Products Tab:</strong> Manage all your listed products, add new items, or edit existing ones</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span><strong>Orders Tab:</strong> Track customer orders and manage fulfillment</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span><strong>Tools Tab:</strong> Access useful farming tools and calculators</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span><strong>Ask Sardar G:</strong> Get instant farming advice from our AI assistant</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="card bg-blue-50 border border-blue-200">
+                  <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
+                    <span>💡</span>
+                    <span>Quick Tips</span>
+                  </h4>
+                  <ul className="space-y-2 text-blue-700">
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Keep your product listings updated with current prices and availability</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Use high-quality images to attract more buyers</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Respond promptly to customer inquiries</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Report crop waste to help connect with waste management centers</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Products Management */}
+            {activeGuideSection === 'products' && (
+              <div className="space-y-4">
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-3 flex items-center gap-2">
+                    <span>➕</span>
+                    <span>Adding a New Product</span>
+                  </h4>
+                  <ol className="space-y-3 text-text-700">
+                    <li className="flex gap-2">
+                      <span className="font-bold">1.</span>
+                      <div>
+                        <strong>Click "Add New Product"</strong> button in Quick Actions or Products tab
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-bold">2.</span>
+                      <div>
+                        <strong>Fill in product details:</strong>
+                        <ul className="ml-4 mt-1 space-y-1">
+                          <li>• Product title (e.g., "Fresh Tomatoes")</li>
+                          <li>• Description with details about quality, harvest date</li>
+                          <li>• Price per unit (PKR)</li>
+                          <li>• Category and condition</li>
+                        </ul>
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-bold">3.</span>
+                      <div>
+                        <strong>Upload images</strong> - Add clear photos showing your produce
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-bold">4.</span>
+                      <div>
+                        <strong>Submit</strong> - Your product will be listed on the marketplace
+                      </div>
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-3 flex items-center gap-2">
+                    <span>✏️</span>
+                    <span>Editing Products</span>
+                  </h4>
+                  <p className="text-text-700 mb-2">
+                    To update product information:
+                  </p>
+                  <ul className="space-y-2 text-text-700">
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Go to the <strong>Products</strong> tab</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Click the <strong>✏️ Edit</strong> button on any product card</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Update the necessary fields</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Save changes</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="card bg-yellow-50 border border-yellow-200">
+                  <h4 className="font-bold text-yellow-900 mb-3 flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Product Best Practices</span>
+                  </h4>
+                  <ul className="space-y-2 text-yellow-700">
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Use descriptive titles that include variety and quality</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Set competitive prices based on market rates</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Update availability regularly to avoid disappointing buyers</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Include harvest date and freshness information</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Orders & Sales */}
+            {activeGuideSection === 'orders' && (
+              <div className="space-y-4">
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-3 flex items-center gap-2">
+                    <span>📦</span>
+                    <span>Managing Orders</span>
+                  </h4>
+                  <p className="text-text-700 mb-3">
+                    When a buyer purchases your products, you'll receive an order notification. Here's how to manage it:
+                  </p>
+                  <ol className="space-y-3 text-text-700">
+                    <li className="flex gap-2">
+                      <span className="font-bold">1.</span>
+                      <div>
+                        <strong>View Order Details</strong> - Check the Orders tab to see buyer information and items
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-bold">2.</span>
+                      <div>
+                        <strong>Prepare Products</strong> - Package items carefully for delivery
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-bold">3.</span>
+                      <div>
+                        <strong>Update Order Status</strong> - Mark as processing, then completed
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-bold">4.</span>
+                      <div>
+                        <strong>Coordinate Delivery</strong> - Contact buyer for pickup or delivery arrangements
+                      </div>
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-3 flex items-center gap-2">
+                    <span>💰</span>
+                    <span>Payment & Earnings</span>
+                  </h4>
+                  <ul className="space-y-2 text-text-700">
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Payments are processed securely through our platform</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Track your earnings in the Overview tab</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>View transaction history and sales reports</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Earnings are transferred to your registered account</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="card bg-green-50 border border-green-200">
+                  <h4 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+                    <span>⭐</span>
+                    <span>Building Your Reputation</span>
+                  </h4>
+                  <ul className="space-y-2 text-green-700">
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Deliver quality products consistently</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Fulfill orders promptly</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Maintain good communication with buyers</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>✓</span>
+                      <span>Handle issues professionally</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Tools & Features */}
+            {activeGuideSection === 'tools' && (
+              <div className="space-y-4">
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-3 flex items-center gap-2">
+                    <span>🤖</span>
+                    <span>Ask Sardar G - AI Assistant</span>
+                  </h4>
+                  <p className="text-text-700 mb-3">
+                    Get instant answers to your farming questions from our AI agricultural expert!
+                  </p>
+                  <ul className="space-y-2 text-text-700">
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Click the "Ask Sardar G" tab in your dashboard</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Ask questions about crops, pests, diseases, weather, or best practices</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Get instant, expert advice tailored for Pakistani farmers</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Available 24/7 in English and Urdu</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-3 flex items-center gap-2">
+                    <span>♻️</span>
+                    <span>Crop Waste Reporting</span>
+                  </h4>
+                  <p className="text-text-700 mb-3">
+                    Turn your crop waste into value by connecting with waste management centers:
+                  </p>
+                  <ul className="space-y-2 text-text-700">
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Report crop waste through the "Report Crop Waste" button</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Get matched with nearby waste centers</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Convert waste into compost, animal feed, or biofuel</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>Earn extra income while helping the environment</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-3 flex items-center gap-2">
+                    <span>⚙️</span>
+                    <span>Account Settings</span>
+                  </h4>
+                  <p className="text-text-700 mb-3">
+                    Manage your account securely:
+                  </p>
+                  <ul className="space-y-2 text-text-700">
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span><strong>Profile Information:</strong> Update your name, phone number, and region</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span><strong>Change Password:</strong> Update your password for security</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>•</span>
+                      <span>All changes require your current password for verification</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* FAQ */}
+            {activeGuideSection === 'faq' && (
+              <div className="space-y-4">
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-2 flex items-center gap-2">
+                    <span>❓</span>
+                    <span>How do I delete a product?</span>
+                  </h4>
+                  <p className="text-text-700">
+                    Go to the Products tab, find the product you want to remove, and click the "🗑️ Delete" button. You'll be asked to confirm before the product is permanently removed.
+                  </p>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-2 flex items-center gap-2">
+                    <span>❓</span>
+                    <span>Can I change product images after listing?</span>
+                  </h4>
+                  <p className="text-text-700">
+                    Currently, image updates need to be done through customer support. Contact our support team through the "💬 Contact Support" button to request image changes.
+                  </p>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-2 flex items-center gap-2">
+                    <span>❓</span>
+                    <span>How do buyers contact me?</span>
+                  </h4>
+                  <p className="text-text-700">
+                    Buyers can see your contact information through the platform. Make sure your phone number is up to date in Account Settings so buyers can reach you for order coordination.
+                  </p>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-2 flex items-center gap-2">
+                    <span>❓</span>
+                    <span>What should I do if I can't fulfill an order?</span>
+                  </h4>
+                  <p className="text-text-700">
+                    Contact the buyer immediately through the phone number provided in the order details. Explain the situation and work out a solution. Then contact our support team for assistance.
+                  </p>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-2 flex items-center gap-2">
+                    <span>❓</span>
+                    <span>Is my information secure?</span>
+                  </h4>
+                  <p className="text-text-700">
+                    Yes! We use industry-standard encryption and security measures to protect your data. Your password is encrypted, and we never share your personal information without your consent. Read our Privacy Policy for more details.
+                  </p>
+                </div>
+
+                <div className="card bg-white border border-border-200">
+                  <h4 className="font-bold text-text-900 mb-2 flex items-center gap-2">
+                    <span>❓</span>
+                    <span>How do I get more help?</span>
+                  </h4>
+                  <p className="text-text-700">
+                    You can:
+                  </p>
+                  <ul className="mt-2 space-y-1 text-text-700 ml-4">
+                    <li>• Click "💬 Contact Support" for direct assistance</li>
+                    <li>• Use "Ask Sardar G" for farming-related questions</li>
+                    <li>• Check our website for additional resources</li>
+                    <li>• Email us at support@freshharvest.pk</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="mt-6 pt-4 border-t border-border-200 text-center">
+            <p className="text-sm text-text-600">
+              Need more help? Click <strong>💬 Contact Support</strong> in Quick Actions
+            </p>
+            <button
+              onClick={onClose}
+              className="btn-primary mt-4 px-6"
+            >
+              Got it, thanks!
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
 

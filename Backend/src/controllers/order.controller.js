@@ -256,9 +256,9 @@ const getOrdersBySeller = asyncHandler(async (req, res) => {
     .populate("products.productId", "title images")
     .sort({ createdAt: -1 });
 
-  // Calculate revenue statistics
+  // Calculate revenue statistics - only count shipped and completed orders
   const totalRevenue = orders
-    .filter(o => o.paymentStatus === "paid" && o.status === "completed")
+    .filter(o => o.paymentStatus === "paid" && (o.status === "shipped" || o.status === "completed"))
     .reduce((sum, order) => {
       const sellerProducts = order.products.filter(
         p => p.sellerId.toString() === sellerId.toString()
@@ -284,10 +284,195 @@ const getOrdersBySeller = asyncHandler(async (req, res) => {
 
 // UNFINISHED
 const HoldinEscrow = asyncHandler(async (req, res) => {});
-//
-const releaseEscrow = asyncHandler(async (req, res) => {});
-//
-const refundOrder = asyncHandler(async (req, res) => {});
+
+// Admin approves order - Required before farmer can accept
+const approveOrder = asyncHandler(async (req, res) => {
+  const orderId = req.params.id;
+  const userId = req.user._id;
+  const userRole = req.user.role;
+
+  if (userRole !== "admin") {
+    throw new APIError(403, "Only admins can approve orders");
+  }
+
+  if (!orderId) {
+    throw new APIError(400, "Order ID is required");
+  }
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new APIError(404, "Order Not Found");
+  }
+
+  if (order.status === "cancelled") {
+    throw new APIError(400, "Cannot approve a cancelled order");
+  }
+
+  if (order.adminApproved) {
+    throw new APIError(400, "Order is already approved");
+  }
+
+  const updatedOrder = await Order.findByIdAndUpdate(
+    orderId,
+    { 
+      adminApproved: true,
+      adminApprovedAt: new Date(),
+      adminApprovedBy: userId
+    },
+    { new: true }
+  )
+    .populate("buyerId", "username phoneno")
+    .populate("products.productId", "title images");
+
+  // Create audit log
+  await Auditlog.create({
+    OrderId: orderId,
+    userId: userId,
+    action: "Order Approved by Admin",
+    amount: order.totalAmount,
+    details: "Admin approved order, farmer can now accept it"
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Order Approved Successfully", updatedOrder));
+});
+
+// Release escrow - Accept order and mark as processing (Seller only after admin approval)
+const releaseEscrow = asyncHandler(async (req, res) => {
+  const orderId = req.params.id;
+  const userId = req.user._id;
+  const userRole = req.user.role;
+
+  if (!orderId) {
+    throw new APIError(400, "Order ID is required");
+  }
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new APIError(404, "Order Not Found");
+  }
+
+  // Check if order is cancelled
+  if (order.status === "cancelled") {
+    throw new APIError(400, "Cannot accept a cancelled order");
+  }
+  
+  if (order.status === "completed") {
+    throw new APIError(400, "Order is already completed");
+  }
+
+  // Check admin approval for farmers (not required for admins)
+  if (userRole !== "admin" && !order.adminApproved) {
+    throw new APIError(403, "Order must be approved by admin before farmer can accept it");
+  }
+
+  // Check authorization - must be seller of the product or admin
+  if (userRole !== "admin") {
+    const isSellerOfOrder = order.products.some(
+      p => p.sellerId.toString() === userId.toString()
+    );
+    if (!isSellerOfOrder) {
+      throw new APIError(403, "You are not authorized to accept this order");
+    }
+  }
+
+  // Update order status to processing (accepted) or shipped
+  let newStatus = "processing";
+  let updateData = {
+    status: newStatus,
+    acceptedAt: new Date()
+  };
+
+  if (order.status === "processing") {
+    newStatus = "shipped"; // If already processing, mark as shipped
+    updateData = {
+      status: newStatus,
+      shippedAt: new Date()
+    };
+  }
+
+  const updatedOrder = await Order.findByIdAndUpdate(
+    orderId,
+    updateData,
+    { new: true }
+  )
+    .populate("buyerId", "username phoneno")
+    .populate("products.productId", "title images");
+
+  // Create audit log
+  await Auditlog.create({
+    OrderId: orderId,
+    userId: userId,
+    action: `Order ${newStatus === "processing" ? "Accepted" : "Shipped"}`,
+    amount: order.totalAmount,
+    details: `Order status changed to ${newStatus}`
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, `Order ${newStatus === "processing" ? "Accepted" : "Shipped"} Successfully`, updatedOrder));
+});
+
+// Cancel/Refund order (Admin only, before shipping)
+const refundOrder = asyncHandler(async (req, res) => {
+  const orderId = req.params.id;
+  const userId = req.user._id;
+  const userRole = req.user.role;
+  const { reason } = req.body;
+
+  if (!orderId) {
+    throw new APIError(400, "Order ID is required");
+  }
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new APIError(404, "Order Not Found");
+  }
+
+  // Only admin can cancel orders
+  if (userRole !== "admin") {
+    throw new APIError(403, "Only admin can cancel orders");
+  }
+
+  // Cannot cancel if already shipped
+  if (order.status === "shipped" || order.status === "delivered" || order.status === "completed") {
+    throw new APIError(400, "Cannot cancel order after it has been shipped");
+  }
+
+  // Cannot cancel if already cancelled
+  if (order.status === "cancelled") {
+    throw new APIError(400, "Order is already cancelled");
+  }
+
+  // Update order
+  const updatedOrder = await Order.findByIdAndUpdate(
+    orderId,
+    { 
+      status: "cancelled",
+      paymentStatus: "refunded",
+      cancelledAt: new Date(),
+      cancelledBy: userId,
+      cancellationReason: reason || "Cancelled by admin"
+    },
+    { new: true }
+  )
+    .populate("buyerId", "username phoneno")
+    .populate("products.productId", "title images");
+
+  // Create audit log
+  await Auditlog.create({
+    OrderId: orderId,
+    userId: userId,
+    action: "Order Cancelled",
+    amount: order.totalAmount,
+    details: reason || "Cancelled by admin"
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Order Cancelled and Refunded Successfully", updatedOrder));
+});
 
 const raiseDispute = asyncHandler(async (req, res) => {
     const buyerId = req.user._id;
@@ -343,6 +528,7 @@ export {
   getOrdersByUser,
   getOrdersBySeller,
   HoldinEscrow,
+  approveOrder,
   releaseEscrow,
   refundOrder,
   //LogOrderAction,

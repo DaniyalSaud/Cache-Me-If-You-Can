@@ -141,16 +141,16 @@ export default function Checkout() {
     if (!formData.fullName.trim()) errors.fullName = "Full name is required";
     if (!formData.phone.trim()) {
       errors.phone = "Phone number is required";
-    } else if (!/^[0-9]{10}$/.test(formData.phone.replace(/[\s-]/g, ''))) {
-      errors.phone = "Invalid phone number (10 digits required)";
+    } else if (!/^[0-9]{11}$/.test(formData.phone.replace(/[\s-]/g, ''))) {
+      errors.phone = "Invalid phone number (11 digits required)";
     }
     if (!formData.addressLine1.trim()) errors.addressLine1 = "Address is required";
     if (!formData.city.trim()) errors.city = "City is required";
     if (!formData.state.trim()) errors.state = "State is required";
     if (!formData.pincode.trim()) {
       errors.pincode = "Pincode is required";
-    } else if (!/^[0-9]{6}$/.test(formData.pincode)) {
-      errors.pincode = "Invalid pincode (6 digits required)";
+    } else if (!/^[0-9]{5}$/.test(formData.pincode)) {
+      errors.pincode = "Invalid pincode (5 digits required)";
     }
     if (!formData.country.trim()) errors.country = "Country is required";
 

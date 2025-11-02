@@ -29,6 +29,8 @@ type Order = {
   }>;
   totalAmount: number;
   status: string;
+  paymentStatus: string;
+  adminApproved: boolean;
   createdAt: string;
 };
 
@@ -427,15 +429,17 @@ export default function AdminDashboard() {
   };
 
   const handleCancelOrder = async (orderId: string) => {
-    if (!window.confirm("Are you sure you want to cancel this order?")) {
-      return;
+    const reason = prompt("Enter cancellation reason (optional):");
+    if (reason === null) {
+      return; // User clicked cancel
     }
 
     try {
       setLoading(true);
       setError("");
-      await apiRequest(`${API_ENDPOINTS.ADMIN}/FCO/${orderId}/cancel`, {
-        method: "PATCH",
+      await apiRequest(`${API_ENDPOINTS.ORDERS}/${orderId}/refund`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason || "Cancelled by admin" }),
       });
       
       // Update local state to reflect the cancelled order
@@ -446,14 +450,47 @@ export default function AdminDashboard() {
       );
       
       // Show success message
-      alert("Order cancelled successfully!");
+      alert("✅ Order cancelled and refunded successfully!");
       
       // Refresh stats
       fetchStats();
     } catch (error: any) {
       console.error("Error cancelling order:", error);
       setError(error.message || "Failed to cancel order");
-      alert(error.message || "Failed to cancel order");
+      alert("❌ " + (error.message || "Failed to cancel order"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveOrder = async (orderId: string) => {
+    if (!window.confirm("Approve this order so farmer can accept it?")) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+      await apiRequest(`${API_ENDPOINTS.ORDERS}/${orderId}/approve`, {
+        method: "POST",
+      });
+      
+      // Update local state to reflect the approved order
+      setOrders(
+        orders.map((order) =>
+          order._id === orderId ? { ...order, adminApproved: true } : order
+        )
+      );
+      
+      // Show success message
+      alert("✅ Order approved! Farmer can now accept it.");
+      
+      // Refresh orders to get latest data
+      await fetchOrders();
+    } catch (error: any) {
+      console.error("Error approving order:", error);
+      setError(error.message || "Failed to approve order");
+      alert("❌ " + (error.message || "Failed to approve order"));
     } finally {
       setLoading(false);
     }
@@ -1009,6 +1046,9 @@ export default function AdminDashboard() {
                         Status
                       </th>
                       <th className="text-left py-3 px-4 font-semibold text-text-700">
+                        Approval
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-text-700">
                         Date
                       </th>
                       <th className="text-right py-3 px-4 font-semibold text-text-700">
@@ -1019,7 +1059,7 @@ export default function AdminDashboard() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="text-center py-8 text-text-600">
+                        <td colSpan={7} className="text-center py-8 text-text-600">
                           <div className="flex items-center justify-center gap-2">
                             <span className="animate-spin">🔄</span>
                             <span>Loading orders...</span>
@@ -1028,7 +1068,7 @@ export default function AdminDashboard() {
                       </tr>
                     ) : orders.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="text-center py-8 text-text-600">
+                        <td colSpan={7} className="text-center py-8 text-text-600">
                           No orders found. Click refresh to load orders.
                         </td>
                       </tr>
@@ -1042,7 +1082,7 @@ export default function AdminDashboard() {
                             {order.buyerId.substring(0, 8)}...
                           </td>
                           <td className="py-3 px-4 font-bold text-primary-700">
-                            ₹{order.totalAmount}
+                            Rs {order.totalAmount.toLocaleString()}
                           </td>
                           <td className="py-3 px-4">
                             <span
@@ -1051,6 +1091,8 @@ export default function AdminDashboard() {
                                   ? "bg-yellow-100 text-yellow-700"
                                   : order.status === "processing"
                                   ? "bg-blue-100 text-blue-700"
+                                  : order.status === "shipped"
+                                  ? "bg-purple-100 text-purple-700"
                                   : order.status === "completed"
                                   ? "bg-green-100 text-green-700"
                                   : "bg-red-100 text-red-700"
@@ -1059,29 +1101,53 @@ export default function AdminDashboard() {
                               {order.status}
                             </span>
                           </td>
+                          <td className="py-3 px-4">
+                            {order.status === "pending" && (
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                  order.adminApproved
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-orange-100 text-orange-700"
+                                }`}
+                              >
+                                {order.adminApproved ? "✓ Approved" : "⏳ Pending"}
+                              </span>
+                            )}
+                            {order.status !== "pending" && (
+                              <span className="text-xs text-text-500">-</span>
+                            )}
+                          </td>
                           <td className="py-3 px-4 text-sm text-text-600">
                             {new Date(order.createdAt).toLocaleDateString()}
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <button
-                              onClick={() => handleCancelOrder(order._id)}
-                              className="text-red-600 hover:text-red-700 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={
-                                loading ||
-                                order.status === "completed" ||
-                                order.status === "cancelled"
-                              }
-                              title={
-                                order.status === "completed" || order.status === "cancelled"
-                                  ? "Cannot cancel this order"
-                                  : "Cancel order"
-                              }
-                            >
-                              {order.status === "completed" ||
-                              order.status === "cancelled"
-                                ? "🔒 Locked"
-                                : "❌ Cancel"}
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              {order.status === "pending" && !order.adminApproved && (
+                                <button
+                                  onClick={() => handleApproveOrder(order._id)}
+                                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={loading}
+                                  title="Approve order"
+                                >
+                                  ✅ Approve
+                                </button>
+                              )}
+                              {(order.status === "pending" || order.status === "processing") && (
+                                <button
+                                  onClick={() => handleCancelOrder(order._id)}
+                                  className="text-red-600 hover:text-red-700 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={loading}
+                                  title="Cancel order before shipping"
+                                >
+                                  ❌ Cancel
+                                </button>
+                              )}
+                              {(order.status === "shipped" || order.status === "completed" || order.status === "cancelled") && (
+                                <span className="text-xs text-text-400">
+                                  🔒 Locked
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))

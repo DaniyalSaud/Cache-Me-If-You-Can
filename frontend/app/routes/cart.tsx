@@ -34,7 +34,7 @@ export default function Cart() {
                 <div className={`flex items-center gap-1 transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
                   <span>🛒</span>
                 </div>
-                <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>FreshHarvest Cart</h1>
+                <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-2xl' : 'text-3xl'}`}>FreshHarvest Cart</h1>
               </Link>
               <Link to="/marketplace" className={`bg-white text-primary-700 hover:bg-gray-50 rounded-lg font-semibold transition-all ${isScrolled ? 'text-[10px] px-3 py-1.5' : 'text-xs px-4 py-2'}`}>
                 Continue Shopping

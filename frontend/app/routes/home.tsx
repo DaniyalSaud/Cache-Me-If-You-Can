@@ -42,7 +42,7 @@ export default function Home() {
                 <span>🌽</span>
                 <span>🥕</span>
               </div>
-              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>FreshHarvest</h1>
+              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-2xl' : 'text-3xl'}`}>FreshHarvest</h1>
             </Link>
             <nav className="flex items-center gap-3">
               <Link
@@ -328,16 +328,24 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          <div className="border-t border-text-200 pt-6 text-center">
-            <p className="text-sm text-text-500 mb-2">
-              © {new Date().getFullYear()} FreshHarvest. Building resilient food supply chains together.
-            </p>
-            <Link 
-              to="/admin-login" 
-              className="text-xs text-text-400 hover:text-primary-700 transition-colors"
-            >
-              🔐 Admin Access
-            </Link>
+          <div className="border-t border-text-200 pt-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+              <p className="text-sm text-text-500">
+                © {new Date().getFullYear()} FreshHarvest. Building resilient food supply chains together.
+              </p>
+              <div className="flex items-center gap-6 text-sm text-text-500">
+                <Link to="/privacy-policy" className="hover:text-primary-700 transition-colors">Privacy Policy</Link>
+                <Link to="/terms-conditions" className="hover:text-primary-700 transition-colors">Terms & Conditions</Link>
+              </div>
+            </div>
+            <div className="text-center">
+              <Link 
+                to="/admin-login" 
+                className="text-xs text-text-400 hover:text-primary-700 transition-colors"
+              >
+                🔐 Admin Access
+              </Link>
+            </div>
           </div>
         </div>
       </footer>

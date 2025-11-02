@@ -117,17 +117,7 @@ export default function Login() {
           <p className="text-sm text-text-600">Login to access your account</p>
         </div>
 
-        {/* Demo Credentials Info */}
-        <div className="card bg-accent-50 border-accent-300 mb-4">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">💡</span>
-            <div className="text-sm">
-              <p className="font-semibold text-text-900 mb-2">Demo Credentials:</p>
-              <p className="text-text-700"><span className="font-semibold">Phone:</span> +1234567890</p>
-              <p className="text-text-700"><span className="font-semibold">Password:</span> Fresh@123</p>
-            </div>
-          </div>
-        </div>
+      
 
         {/* Login Card */}
         <div className="card">

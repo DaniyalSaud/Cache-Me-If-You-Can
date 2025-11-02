@@ -13,4 +13,6 @@ export default [
   route("loan-application", "routes/loan-application.tsx"),
   route("admin-login", "routes/admin-login.tsx"),
   route("admin-dashboard", "routes/admin-dashboard.tsx"),
+  route("privacy-policy", "routes/privacy-policy.tsx"),
+  route("terms-conditions", "routes/terms-conditions.tsx"),
 ] satisfies RouteConfig;
