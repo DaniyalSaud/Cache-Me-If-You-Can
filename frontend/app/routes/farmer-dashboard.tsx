@@ -49,6 +49,7 @@ export default function FarmerDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // Fetch products from API
   const fetchProducts = async () => {
@@ -84,6 +85,16 @@ export default function FarmerDashboard() {
       fetchProducts();
     }
   }, [isAuthenticated]);
+
+  // Scroll detection for navbar height
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -172,22 +183,22 @@ export default function FarmerDashboard() {
   return (
     <div className="min-h-screen bg-background-50 pb-16">
       {/* Header Navigation */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-text-200">
+      <header className={`sticky top-0 z-50 bg-primary-700 shadow-lg transition-all duration-300 ${isScrolled ? 'py-0' : ''}`}>
         <div className="container-page">
-          <div className="flex items-center justify-between py-4">
+          <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'py-2' : 'py-4'}`}>
             <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-              <div className="flex items-center gap-1 text-2xl">
+              <div className={`flex items-center gap-1 transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
                 <span>🌾</span>
                 <span>🚜</span>
                 <span>🌱</span>
               </div>
-              <h1 className="text-xl font-bold text-primary-700">FreshHarvest Farmer</h1>
+              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>FreshHarvest Farmer</h1>
             </Link>
             <nav className="flex items-center gap-3">
              
               <button 
                 onClick={handleLogout}
-                className="btn-outline text-xs px-4 py-2"
+                className={`bg-white/10 text-white hover:bg-white/20 rounded-lg font-semibold uppercase tracking-widest transition-all ${isScrolled ? 'text-[10px] px-3 py-1.5' : 'text-xs px-4 py-2'}`}
               >
                 Logout
               </button>
@@ -199,10 +210,7 @@ export default function FarmerDashboard() {
       <section className="container-page space-y-8 mt-8">
         {/* Page Header */}
         <header className="space-y-3">
-          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-primary-700">
-            <span>🌾</span>
-            <span>Farmer Dashboard</span>
-          </p>
+          
           <h1 className="text-3xl md:text-4xl font-bold text-text-900">
             Welcome Back, {username}!
           </h1>
@@ -507,77 +515,26 @@ export default function FarmerDashboard() {
                   </div>
                 </Link>
 
-                {/* Waste Center Locator */}
-                <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 hover:shadow-lg transition-all cursor-pointer group">
-                  <div className="flex items-start gap-4">
-                    <div className="text-5xl">📍</div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-blue-900 mb-2 group-hover:text-blue-700">
-                        Find Waste Centers
-                      </h3>
-                      <p className="text-sm text-blue-800 mb-3">
-                        Locate nearby waste collection centers and recycling facilities. Get directions and contact information.
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-blue-700 font-semibold">
-                        <span>Coming Soon</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Weather Forecast */}
-                <div className="card bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-200 hover:shadow-lg transition-all cursor-pointer group">
-                  <div className="flex items-start gap-4">
-                    <div className="text-5xl">🌤️</div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-amber-900 mb-2 group-hover:text-amber-700">
-                        Weather Forecast
-                      </h3>
-                      <p className="text-sm text-amber-800 mb-3">
-                        Check weather conditions and forecasts for your region. Plan your farming activities accordingly.
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-amber-700 font-semibold">
-                        <span>Coming Soon</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Market Prices */}
-                <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 hover:shadow-lg transition-all cursor-pointer group">
-                  <div className="flex items-start gap-4">
-                    <div className="text-5xl">💹</div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-purple-900 mb-2 group-hover:text-purple-700">
-                        Market Prices
-                      </h3>
-                      <p className="text-sm text-purple-800 mb-3">
-                        View real-time market prices for various crops. Make informed decisions about pricing your products.
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-purple-700 font-semibold">
-                        <span>Coming Soon</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Farming Tips */}
-                <div className="card bg-gradient-to-br from-teal-50 to-teal-100 border-2 border-teal-200 hover:shadow-lg transition-all cursor-pointer group">
-                  <div className="flex items-start gap-4">
-                    <div className="text-5xl">📚</div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-teal-900 mb-2 group-hover:text-teal-700">
-                        Farming Tips & Guides
-                      </h3>
-                      <p className="text-sm text-teal-800 mb-3">
-                        Access expert tips, best practices, and guides for sustainable farming and crop management.
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-teal-700 font-semibold">
-                        <span>Coming Soon</span>
+                <Link to="/farming-tools" className="block">
+                  <div className="card bg-gradient-to-br from-teal-50 to-teal-100 border-2 border-teal-200 hover:shadow-lg transition-all cursor-pointer group">
+                    <div className="flex items-start gap-4">
+                      <div className="text-5xl">📚</div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-teal-900 mb-2 group-hover:text-teal-700">
+                          Farming Tools & Calculators
+                        </h3>
+                        <p className="text-sm text-teal-800 mb-3">
+                          Calculate water, fertilizer requirements and estimate electricity bills. Smart tools for efficient farming.
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-teal-700 font-semibold">
+                          <span>Open Tools</span>
+                          <span>→</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
 
                 {/* Loan & Subsidies */}
                 <div className="card bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200 hover:shadow-lg transition-all cursor-pointer group">

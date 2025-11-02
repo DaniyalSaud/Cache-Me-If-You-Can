@@ -7,6 +7,8 @@ import {
     updateWasteRequestStatus,
     addWasteCollectionCenter,
     getAllWasteCenters,
+    getAllWasteReports,
+    deleteWasteCenter,
     electricityBillEstimator,
 } from '../controllers/tools.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
@@ -55,5 +57,11 @@ router.route('/waste/center')
 
 router.route('/waste/centers')
     .get(verifyJWT, getAllWasteCenters);
+
+router.route('/waste/reports')
+    .get(verifyJWT, authorizeRoles("admin"), getAllWasteReports);
+
+router.route('/waste/center/:centerId')
+    .delete(verifyJWT, authorizeRoles("admin"), deleteWasteCenter);
 
 export default router;

@@ -1,5 +1,6 @@
 import type { Route } from "./+types/home";
 import { Link } from "react-router";
+import { useState, useEffect } from "react";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -13,6 +14,18 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Scroll detection for navbar height
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const scrollToFeatures = () => {
     document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -20,29 +33,29 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background-50 text-text-900">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-text-200">
+      <header className={`sticky top-0 z-50 bg-primary-700 shadow-lg transition-all duration-300 ${isScrolled ? 'py-0' : ''}`}>
         <div className="container-page">
-          <div className="flex items-center justify-between py-4">
+          <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'py-2' : 'py-4'}`}>
             <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-              <div className="flex items-center gap-1 text-3xl">
+              <div className={`flex items-center gap-1 transition-all duration-300 ${isScrolled ? 'text-2xl' : 'text-3xl'}`}>
                 <span>🍎</span>
                 <span>🌽</span>
                 <span>🥕</span>
               </div>
-              <h1 className="text-2xl font-bold text-primary-700">FreshHarvest</h1>
+              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>FreshHarvest</h1>
             </Link>
             <nav className="flex items-center gap-3">
               <Link
                 to="/marketplace"
-                className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-transparent px-4 py-2 text-sm font-semibold text-text-600 hover:text-primary-700 hover:bg-primary-50 transition-colors"
+                className={`hidden sm:inline-flex items-center gap-2 rounded-lg border border-transparent font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all ${isScrolled ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'}`}
               >
                 <span>🧺</span>
                 <span>Marketplace</span>
               </Link>
-              <Link to="/login" className="btn-outline">
+              <Link to="/login" className={`bg-white/10 text-white hover:bg-white/20 font-semibold rounded-lg transition-all duration-200 ${isScrolled ? 'py-2 px-4 text-sm' : 'py-3 px-6 text-base'}`}>
                 Login
               </Link>
-              <Link to="/signup" className="btn-primary">
+              <Link to="/signup" className={`bg-white text-primary-700 hover:bg-gray-50 font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${isScrolled ? 'py-2 px-4 text-sm' : 'py-3 px-6 text-base'}`}>
                 Sign Up Free
               </Link>
             </nav>
@@ -315,8 +328,16 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          <div className="border-t border-text-200 pt-6 text-center text-sm text-text-500">
-            © {new Date().getFullYear()} FreshHarvest. Building resilient food supply chains together.
+          <div className="border-t border-text-200 pt-6 text-center">
+            <p className="text-sm text-text-500 mb-2">
+              © {new Date().getFullYear()} FreshHarvest. Building resilient food supply chains together.
+            </p>
+            <Link 
+              to="/admin-login" 
+              className="text-xs text-text-400 hover:text-primary-700 transition-colors"
+            >
+              🔐 Admin Access
+            </Link>
           </div>
         </div>
       </footer>

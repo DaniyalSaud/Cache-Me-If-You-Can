@@ -293,26 +293,32 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
 //______________________TO BE IMPLEMENTED_______________________________________
 // Report crop waste and find nearest collection centers
 const reportCropWaste = asyncHandler(async (req, res) => {
-  const { cropType, quantity, latitude, longitude } = req.body;
+  const { cropTypes, quantity, latitude, longitude, preferredCenterId } = req.body;
   const farmerId = req.user._id;
 
   // Validate input
-  if (!(cropType && quantity && latitude && longitude)) {
+  if (!(cropTypes && quantity && latitude && longitude)) {
     throw new APIError(
       400,
-      "All fields are required: cropType, quantity, latitude, longitude"
+      "All fields are required: cropTypes, quantity, latitude, longitude"
     );
+  }
+
+  if (!Array.isArray(cropTypes) || cropTypes.length === 0) {
+    throw new APIError(400, "At least one crop type must be selected");
   }
 
   if (quantity <= 0) {
     throw new APIError(400, "Quantity must be greater than 0");
   }
 
-  // Find nearest waste collection centers that accept this crop type
-  // and have available capacity
-  const nearestCenters = await WasteCenter.find({
-    acceptedCropTypes: cropType,
-    currentCapacity: { $lte: quantity },
+  // Find nearest waste collection centers that accept these crop types
+  // Centers that accept "All" or any of the specified crop types
+  const query = {
+    $or: [
+      { acceptedCropTypes: "All" },
+      { acceptedCropTypes: { $in: cropTypes } }
+    ],
     location: {
       $near: {
         $geometry: {
@@ -322,25 +328,31 @@ const reportCropWaste = asyncHandler(async (req, res) => {
         $maxDistance: 100000, // 100 kilometers
       },
     },
-  })
-    .limit(5)
-    .select("name location address contactNumber currentCapacity maxCapacity");
+  };
 
-  if (!nearestCenters.length) {
-    throw new APIError(404, "No suitable collection centers found nearby");
-  }
+  const nearestCenters = await WasteCenter.find(query)
+    .limit(5)
+    .select("name location address contactNumber currentCapacity maxCapacity acceptedCropTypes");
 
   // Create crop waste request
-  const cropWaste = await CropWaste.create({
+  const wasteData = {
     farmerId,
-    cropType,
+    cropTypes,
     quantity,
     location: {
       type: "Point",
       coordinates: [longitude, latitude],
     },
     status: "pending",
-  });
+  };
+
+  // Add preferred center if provided
+  if (preferredCenterId) {
+    wasteData.preferredCenter = preferredCenterId;
+    wasteData.assignedCenter = preferredCenterId;
+  }
+
+  const cropWaste = await CropWaste.create(wasteData);
 
   // Format the response with centers and their distances
   const centersWithDistance = nearestCenters.map((center) => {
@@ -363,10 +375,15 @@ const reportCropWaste = asyncHandler(async (req, res) => {
     };
   });
 
+  const message = nearestCenters.length > 0
+    ? "Crop waste reported successfully. We found suitable collection centers nearby."
+    : "Crop waste reported successfully. We'll notify you when a suitable center becomes available.";
+
   return res.status(201).json(
-    new ApiResponse(201, "Crop waste reported successfully", {
+    new ApiResponse(201, message, {
       wasteRequest: cropWaste,
       nearestCenters: centersWithDistance,
+      totalCentersFound: nearestCenters.length
     })
   );
 });
@@ -445,6 +462,9 @@ const addWasteCollectionCenter = asyncHandler(async (req, res) => {
     latitude,
     longitude,
     address,
+    city,
+    division,
+    country,
     contactNumber,
     acceptedCropTypes,
     maxCapacity,
@@ -472,6 +492,9 @@ const addWasteCollectionCenter = asyncHandler(async (req, res) => {
       coordinates: [longitude, latitude],
     },
     address,
+    city: city || "",
+    division: division || "",
+    country: country || "",
     contactNumber,
     acceptedCropTypes,
     currentCapacity: 0,
@@ -494,8 +517,44 @@ const getAllWasteCenters = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, "Waste centers retrieved successfully", centers)
+      new ApiResponse(200, "Waste centers retrieved successfully", { centers })
     );
+});
+
+// Delete waste collection center
+const deleteWasteCenter = asyncHandler(async (req, res) => {
+  const { centerId } = req.params;
+
+  if (!centerId) {
+    throw new APIError(400, "Center ID is required");
+  }
+
+  const center = await WasteCenter.findByIdAndDelete(centerId);
+
+  if (!center) {
+    throw new APIError(404, "Waste center not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, "Waste center deleted successfully", center)
+    );
+});
+
+// Get all waste reports (Admin only)
+const getAllWasteReports = asyncHandler(async (req, res) => {
+    const reports = await CropWaste.find({})
+        .populate("farmerId", "username email phoneno")
+        .populate("assignedCenter", "name city")
+        .populate("preferredCenter", "name city")
+        .sort({ createdAt: -1 });
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, "Waste reports fetched successfully", { reports })
+        );
 });
 
 // Get transcript from YouTube video
@@ -519,6 +578,8 @@ export {
     updateWasteRequestStatus,
     addWasteCollectionCenter,
     getAllWasteCenters,
+    getAllWasteReports,
+    deleteWasteCenter,
     waterconsumption,
     fertilizerConsumption,
     electricityBillEstimator,

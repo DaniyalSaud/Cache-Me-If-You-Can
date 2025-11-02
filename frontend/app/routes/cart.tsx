@@ -1,6 +1,7 @@
 import type { Route } from "./+types/cart";
 import { Link } from "react-router";
 import { useCart } from "../context/CartContext";
+import { useState, useEffect } from "react";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -11,20 +12,31 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Cart() {
   const { cartItems, removeFromCart, updateQuantity, getTotalPrice, getTotalItems } = useCart();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Scroll detection for navbar height
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-background-50">
-        <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-text-200">
+        <header className={`sticky top-0 z-50 bg-primary-700 shadow-lg transition-all duration-300 ${isScrolled ? 'py-0' : ''}`}>
           <div className="container-page">
-            <div className="flex items-center justify-between py-4">
+            <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'py-2' : 'py-4'}`}>
               <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-                <div className="flex items-center gap-1 text-2xl">
+                <div className={`flex items-center gap-1 transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
                   <span>🛒</span>
                 </div>
-                <h1 className="text-xl font-bold text-primary-700">FreshHarvest Cart</h1>
+                <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>FreshHarvest Cart</h1>
               </Link>
-              <Link to="/marketplace" className="btn-outline text-xs px-4 py-2">
+              <Link to="/marketplace" className={`bg-white text-primary-700 hover:bg-gray-50 rounded-lg font-semibold transition-all ${isScrolled ? 'text-[10px] px-3 py-1.5' : 'text-xs px-4 py-2'}`}>
                 Continue Shopping
               </Link>
             </div>
@@ -51,20 +63,20 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-background-50 pb-16">
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-text-200">
+      <header className={`sticky top-0 z-50 bg-primary-700 shadow-lg transition-all duration-300 ${isScrolled ? 'py-0' : ''}`}>
         <div className="container-page">
-          <div className="flex items-center justify-between py-4">
+          <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'py-2' : 'py-4'}`}>
             <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-              <div className="flex items-center gap-1 text-2xl">
+              <div className={`flex items-center gap-1 transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
                 <span>🛒</span>
               </div>
-              <h1 className="text-xl font-bold text-primary-700">FreshHarvest Cart</h1>
+              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>FreshHarvest Cart</h1>
             </Link>
             <div className="flex items-center gap-3">
-              <Link to="/marketplace" className="text-sm text-text-600 hover:text-primary-700 transition-colors font-medium">
+              <Link to="/marketplace" className={`text-white/90 hover:text-white transition-colors font-medium ${isScrolled ? 'text-xs' : 'text-sm'}`}>
                 Continue Shopping
               </Link>
-              <div className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-xs font-bold">
+              <div className={`bg-white/20 text-white rounded-full font-bold transition-all duration-300 ${isScrolled ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'}`}>
                 {getTotalItems()} batches
               </div>
             </div>

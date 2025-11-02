@@ -23,6 +23,21 @@ const wasteCollectionCenterSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        city: {
+            type: String,
+            required: false,
+            trim: true
+        },
+        division: {
+            type: String,
+            required: false,
+            trim: true
+        },
+        country: {
+            type: String,
+            required: false,
+            trim: true
+        },
         contactNumber: {
             type: String,
             required: true

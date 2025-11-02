@@ -9,8 +9,12 @@ const cropWasteSchema = new mongoose.Schema(
         },
         cropType: {
             type: String,
-            required: true
+            required: false
         },
+        cropTypes: [{
+            type: String,
+            required: false
+        }],
         quantity: {
             type: Number,
             required: true,
@@ -34,6 +38,10 @@ const cropWasteSchema = new mongoose.Schema(
             default: "pending"
         },
         assignedCenter: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "WasteCenter"
+        },
+        preferredCenter: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "WasteCenter"
         },

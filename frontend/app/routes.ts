@@ -8,4 +8,7 @@ export default [
   route("cart", "routes/cart.tsx"),
   route("farmer-dashboard", "routes/farmer-dashboard.tsx"),
   route("waste-report", "routes/waste-report.tsx"),
+  route("farming-tools", "routes/farming-tools.tsx"),
+  route("admin-login", "routes/admin-login.tsx"),
+  route("admin-dashboard", "routes/admin-dashboard.tsx"),
 ] satisfies RouteConfig;

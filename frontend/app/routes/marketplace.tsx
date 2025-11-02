@@ -50,6 +50,7 @@ export default function Marketplace() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Produce");
+  const [isScrolled, setIsScrolled] = useState(false);
   
   // API Products state
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
@@ -100,6 +101,16 @@ export default function Marketplace() {
     }
   }, [isAuthenticated]);
 
+  // Scroll detection for navbar height
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleLogout = async () => {
     try {
       // Call the backend logout API
@@ -120,157 +131,7 @@ export default function Marketplace() {
     }
   };
 
-  const produce = useMemo<ProduceItem[]>(
-    () => [
-      {
-        id: "tomato",
-        name: "Heirloom Tomatoes",
-        emoji: "🍅",
-        description: "Sweet and juicy tomatoes perfect for salads and sauces.",
-        price: "₹95",
-        unit: "per 100kg batch",
-        origin: "Kolhapur, Maharashtra",
-        availability: "Peak season",
-        badges: ["Open-field", "Non-GMO"],
-        category: "Fruit",
-        isBestSeller: true,
-      },
-      {
-        id: "potato",
-        name: "New Potatoes",
-        emoji: "🥔",
-        description: "Thin-skinned potatoes perfect for roasting and mashing.",
-        price: "₹60",
-        unit: "per 100kg batch",
-        origin: "Indore, Madhya Pradesh",
-        availability: "Cellar cured",
-        badges: ["Soil-grown"],
-        category: "Root",
-        isBestSeller: true,
-      },
-      {
-        id: "spinach",
-        name: "Baby Spinach",
-        emoji: "🥬",
-        description: "Tender leaves harvested at dawn to preserve crunch and nutrients.",
-        price: "₹120",
-        unit: "per 100kg batch",
-        origin: "Nashik, Maharashtra",
-        availability: "Harvested this morning",
-        badges: ["Hydroponic", "Organic"],
-        category: "Leafy Greens",
-      },
-      {
-        id: "carrot",
-        name: "Sweet Carrots",
-        emoji: "🥕",
-        description: "Crunchy, naturally sweet carrots rich in beta carotene.",
-        price: "₹70",
-        unit: "per 100kg batch",
-        origin: "Sangli, Maharashtra",
-        availability: "Freshly washed",
-        badges: ["Soil-grown", "Pesticide-free"],
-        category: "Root",
-      },
-      {
-        id: "cucumber",
-        name: "English Cucumbers",
-        emoji: "🥒",
-        description: "Seedless cucumbers ideal for hydration and salads.",
-        price: "₹55",
-        unit: "per 100kg batch",
-        origin: "Pune, Maharashtra",
-        availability: "Chilled and ready",
-        badges: ["Hydroponic"],
-        category: "Fruit",
-      },
-      {
-        id: "cauliflower",
-        name: "Snow Cauliflower",
-        emoji: "🥦",
-        description: "Dense, white florets with delicate texture and mild flavor.",
-        price: "₹85",
-        unit: "per head",
-        origin: "Ooty, Tamil Nadu",
-        availability: "Limited batches",
-        badges: ["Cold-chain", "Premium"],
-        category: "Leafy Greens",
-      },
-      {
-        id: "peas",
-        name: "Garden Peas",
-        emoji: "🫛",
-        description: "Sweet peas hand-picked and flash chilled to lock freshness.",
-        price: "₹140",
-        unit: "per 100kg batch",
-        origin: "Shimla, Himachal Pradesh",
-        availability: "Flash frozen",
-        badges: ["Frozen", "Premium"],
-        category: "Legume",
-      },
-      {
-        id: "chili",
-        name: "Green Chilies",
-        emoji: "🌶️",
-        description: "Balanced heat chilies to spice up everyday cooking.",
-        price: "₹80",
-        unit: "per 100kg batch",
-        origin: "Guntur, Andhra Pradesh",
-        availability: "Daily harvest",
-        badges: ["Heat-balanced"],
-        category: "Fruit",
-      },
-      {
-        id: "coriander",
-        name: "Coriander Bunch",
-        emoji: "🌿",
-        description: "Fragrant herb bundled with roots for prolonged freshness.",
-        price: "₹25",
-        unit: "per bunch",
-        origin: "Surat, Gujarat",
-        availability: "Bundled at 5 AM",
-        badges: ["Heritage seeds"],
-        category: "Herb",
-      },
-      {
-        id: "pumpkin",
-        name: "Sugar Pumpkin",
-        emoji: "🎃",
-        description: "Sweet flesh pumpkins perfect for soups and pies.",
-        price: "₹110",
-        unit: "per piece",
-        origin: "Alappuzha, Kerala",
-        availability: "Limited harvest",
-        badges: ["Seasonal"],
-        category: "Fruit",
-      },
-      {
-        id: "okra",
-        name: "Tender Okra",
-        emoji: "🫑",
-        description: "Slender pods with minimal seeds ideal for frying and stews.",
-        price: "₹75",
-        unit: "per 100kg batch",
-        origin: "Nagpur, Maharashtra",
-        availability: "Picked and packed",
-        badges: ["Zero residue"],
-        category: "Fruit",
-      },
-      {
-        id: "beetroot",
-        name: "Ruby Beetroot",
-        emoji: "🍠",
-        description: "Earthy beetroot rich in antioxidants and natural sweetness.",
-        price: "₹65",
-        unit: "per 100kg batch",
-        origin: "Ludhiana, Punjab",
-        availability: "Washed and trimmed",
-        badges: ["Organic"],
-        category: "Root",
-      },
-    ],
-    []
-  );
+  // Removed dummy data - now only showing real products from API
 
   const categories = useMemo(
     () => ["All Produce", "Leafy Greens", "Root", "Fruit", "Legume", "Herb"],
@@ -300,19 +161,14 @@ export default function Marketplace() {
     }));
   }, [apiProducts]);
 
-  // Combine mock and API products
+  // Only use API products (no mock data)
   const allProducts = useMemo(() => {
-    return [...produce, ...apiProduceItems];
-  }, [produce, apiProduceItems]);
+    return apiProduceItems;
+  }, [apiProduceItems]);
 
   // Filter produce based on search and category
   const filteredProduce = useMemo(() => {
     let filtered = allProducts;
-
-    // When showing best sellers separately, exclude them from the main grid
-    if (!searchQuery && selectedCategory === "All Produce") {
-      filtered = filtered.filter((item) => !item.isBestSeller);
-    }
 
     // Filter by category
     if (selectedCategory !== "All Produce") {
@@ -332,9 +188,6 @@ export default function Marketplace() {
 
     return filtered;
   }, [allProducts, selectedCategory, searchQuery]);
-
-  // Separate best sellers
-  const bestSellers = useMemo(() => allProducts.filter((item) => item.isBestSeller), [allProducts]);
 
   // Show authentication message if not logged in
   if (!isAuthenticated) {
@@ -369,22 +222,22 @@ export default function Marketplace() {
   return (
     <div className="min-h-screen bg-background-50 pb-16">
       {/* Header Navigation */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-text-200">
+      <header className={`sticky top-0 z-50 bg-primary-700 shadow-lg transition-all duration-300 ${isScrolled ? 'py-0' : ''}`}>
         <div className="container-page">
-          <div className="flex items-center justify-between py-4">
+          <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'py-2' : 'py-4'}`}>
             <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-              <div className="flex items-center gap-1 text-2xl">
+              <div className={`flex items-center gap-1 transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
                 <span>🍎</span>
                 <span>🌽</span>
                 <span>🥕</span>
               </div>
-              <h1 className="text-xl font-bold text-primary-700">FreshHarvest</h1>
+              <h1 className={`font-bold text-white transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>FreshHarvest</h1>
             </Link>
             <nav className="flex items-center gap-3">
-              <Link to="/" className="text-sm text-text-600 hover:text-primary-700 transition-colors font-medium">
+              <Link to="/" className={`text-white/90 hover:text-white transition-colors font-medium ${isScrolled ? 'text-xs' : 'text-sm'}`}>
                 Home
               </Link>
-              <Link to="/cart" className="relative btn-outline text-xs px-4 py-2 font-semibold flex items-center gap-2">
+              <Link to="/cart" className={`relative bg-white text-primary-700 hover:bg-gray-50 rounded-lg font-semibold flex items-center gap-2 transition-all ${isScrolled ? 'text-[10px] px-3 py-1.5' : 'text-xs px-4 py-2'}`}>
                 🛒 Cart
                 {getTotalItems() > 0 && (
                   <span className="absolute -top-2 -right-2 bg-accent-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
@@ -392,7 +245,7 @@ export default function Marketplace() {
                   </span>
                 )}
               </Link>
-              <button onClick={handleLogout} className="btn-outline text-xs px-4 py-2 font-semibold uppercase tracking-widest">
+              <button onClick={handleLogout} className={`bg-white/10 text-white hover:bg-white/20 rounded-lg font-semibold uppercase tracking-widest transition-all ${isScrolled ? 'text-[10px] px-3 py-1.5' : 'text-xs px-4 py-2'}`}>
                 🚪 LOGOUT
               </button>
             </nav>
@@ -510,98 +363,6 @@ export default function Marketplace() {
           </div>
         </div>
 
-        {/* Best Sellers Section */}
-        {!searchQuery && selectedCategory === "All Produce" && bestSellers.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">⭐</div>
-              <div>
-                <h2 className="text-xl font-bold text-text-900">Most Selling Items</h2>
-                <p className="text-sm text-text-600">Top picks from our farmers - high demand essentials</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {bestSellers.map((item) => (
-                <article
-                  key={item.id}
-                  className="card h-full flex flex-col gap-4 bg-white hover:shadow-xl transition-shadow duration-200 border-2 border-accent-400"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      {/* Display image if available, otherwise emoji */}
-                      {item.emoji.startsWith('img:') ? (
-                        <img 
-                          src={item.emoji.substring(4)} 
-                          alt={item.name}
-                          className="w-20 h-20 object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="text-4xl md:text-5xl select-none">{item.emoji}</div>
-                      )}
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-xl font-semibold text-text-900">{item.name}</h3>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {item.badges.map((badge) => (
-                            <span
-                              key={badge}
-                              className="inline-flex items-center rounded-full bg-secondary-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-700"
-                            >
-                              {badge}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-accent-700 bg-accent-100 px-3 py-1 rounded-full whitespace-nowrap">
-                      ⭐ Best Seller
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-text-600 leading-relaxed">
-                    {item.description}
-                  </p>
-
-                  <dl className="grid grid-cols-2 gap-y-3 text-sm text-text-700 bg-background-100 rounded-lg p-4">
-                    <div>
-                      <dt className="uppercase text-[0.65rem] font-semibold tracking-widest text-text-500">Category</dt>
-                      <dd className="font-medium text-text-800">{item.category}</dd>
-                    </div>
-                    <div className="text-right">
-                      <dt className="uppercase text-[0.65rem] font-semibold tracking-widest text-text-500">Price</dt>
-                      <dd className="text-2xl font-bold text-primary-700">{item.price}</dd>
-                      <dd className="text-xs text-text-500">{item.unit}</dd>
-                    </div>
-                    <div>
-                      <dt className="uppercase text-[0.65rem] font-semibold tracking-widest text-text-500">Origin</dt>
-                      <dd className="font-medium text-text-800">{item.origin}</dd>
-                    </div>
-                    <div className="text-right">
-                      <dt className="uppercase text-[0.65rem] font-semibold tracking-widest text-text-500">Availability</dt>
-                      <dd className="font-medium text-text-800">{item.availability}</dd>
-                    </div>
-                  </dl>
-
-                  <div className="mt-auto flex flex-col gap-3">
-                    <div className="flex items-center justify-between text-xs text-text-500 uppercase tracking-widest">
-                      <span>Sustainable Farming</span>
-                      <span>Verified Seller</span>
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={() => handleAddToCart(item)}
-                      className="btn-primary w-full text-sm font-semibold uppercase tracking-widest"
-                    >
-                      🛒 Add to Cart
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* All Produce Grid */}
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -615,23 +376,33 @@ export default function Marketplace() {
             )}
           </div>
 
-          {filteredProduce.length === 0 ? (
+          {filteredProduce.length === 0 && !loadingProducts ? (
             <div className="card bg-white text-center py-12">
-              <div className="text-5xl mb-4">🔍</div>
-              <h3 className="text-xl font-semibold text-text-900 mb-2">No produce found</h3>
+              <div className="text-5xl mb-4">
+                {searchQuery || selectedCategory !== "All Produce" ? "🔍" : "📦"}
+              </div>
+              <h3 className="text-xl font-semibold text-text-900 mb-2">
+                {searchQuery || selectedCategory !== "All Produce" 
+                  ? "No produce found" 
+                  : "No products available yet"}
+              </h3>
               <p className="text-sm text-text-600 mb-4">
-                Try adjusting your search or browse all categories
+                {searchQuery || selectedCategory !== "All Produce"
+                  ? "Try adjusting your search or browse all categories"
+                  : "Farmers haven't listed any products yet. Check back soon!"}
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedCategory("All Produce");
-                }}
-                className="btn-outline text-sm font-semibold uppercase tracking-widest"
-              >
-                Clear Filters
-              </button>
+              {(searchQuery || selectedCategory !== "All Produce") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("All Produce");
+                  }}
+                  className="btn-outline text-sm font-semibold uppercase tracking-widest"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
