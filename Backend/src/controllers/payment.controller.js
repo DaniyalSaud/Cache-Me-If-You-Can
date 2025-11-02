@@ -1,5 +1,15 @@
 import { asyncHandler } from "../utils/asyncHandler";
 import Payment from "../models/payment.model.js";
+import User from "../models/user.models.js";
+export const getEasypaisaNumber = asyncHandler(async (req, res) => {
+  // Return a static Easypaisa number for payments
+    const admin = await User.findOne({ role: 'admin' });
+    if (!admin) {
+        return res.status(404).json({ message: "Admin user not found" });
+    }
+
+  res.json({ easypaisaNumber: admin.phoneno });
+});
 
 export const getAllPayments = asyncHandler(async (req, res) => {
   const payments = await Payment.find().sort({ createdAt: -1 });
@@ -15,20 +25,23 @@ export const getPaymentById = asyncHandler(async (req, res) => {
   res.json(payment);
 });
 
+// To be used by admin
 export const createPayment = asyncHandler(async (req, res) => {
-    const { amount, method, status, orderId } = req.body;
+    const { amount, method, status, orderId, transactionId } = req.body;
 
     const payment = new Payment({
         amount,
         method,
-        status,
-        orderId // Payment against the order
+        status : 'pending',
+        orderId, // Payment against the order
+        transactionId // Transaction ID
     });
 
     await payment.save();
     res.status(201).json(payment);
 });
 
+// To be used by admin
 export const updatePayment = asyncHandler(async (req, res) => {
     const { amount, method, status } = req.body;
     const payment = await Payment.findById(req.params.id);
@@ -43,6 +56,7 @@ export const updatePayment = asyncHandler(async (req, res) => {
     res.json(payment);
 });
 
+// To be used by admin
 export const deletePayment = asyncHandler(async (req, res) => {
     const payment = await Payment.findById(req.params.id);
     if (!payment) {

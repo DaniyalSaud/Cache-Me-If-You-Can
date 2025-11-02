@@ -5,10 +5,12 @@ import {
   createPayment,
   updatePayment,
   deletePayment,
+  getEasypaisaNumber,
 } from "../controllers/payment.controller.js";
 const router = express.Router();
 
-router.get("/", getAllPayments);
+router.get("/easypaisa-number", getEasypaisaNumber);
+router.get("/", getAllPayments); // Gets all payment record;
 router.get("/:id", getPaymentById);
 router.post("/", createPayment);
 router.put("/:id", updatePayment);
