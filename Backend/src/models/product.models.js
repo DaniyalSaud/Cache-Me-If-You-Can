@@ -29,15 +29,15 @@ const productSchema = new Schema(
       type: [String],
       required: true,
     },
-    verified: {
-      type: Boolean,
-      default: false,
-    },
-    verificationId: {
-      type: Schema.Types.ObjectId,
-      ref: "Verification",
-      default: null,
-    },
+    // verified: {
+    //   type: Boolean,
+    //   default: false,
+    // },
+    // verificationId: {
+    //   type: Schema.Types.ObjectId,
+    //   ref: "Verification",
+    //   default: null,
+    // },
   },
   { timestamps: true }
 );
