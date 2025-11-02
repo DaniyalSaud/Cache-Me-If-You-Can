@@ -14,15 +14,16 @@ import {
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../middlewares/role.middleware.js';
 import { getGeminiResponse } from "../controllers/Gemini.controller.js";
-
+import { availLoan } from '../controllers/loanavail.controller.js';
 const router = Router();
 
 
 //_____________________________________________________________
 
+router.route('/availloan').post(authorizeRoles("seller","admin"),availLoan);
+
 // Water consumption route
 // Tested Working
-
 router.route('/water-consumption')
     .post(verifyJWT, authorizeRoles("seller", "admin"), waterconsumption);
 
@@ -30,6 +31,7 @@ router.route('/fertilizer-consumption').post(verifyJWT, authorizeRoles("seller",
 
 router.route('/electricity-bill-estimator').post(verifyJWT, authorizeRoles("seller", "admin"),electricityBillEstimator);
 
+// GEMININ ROUTE
 router.route('/ask').post(verifyJWT,authorizeRoles("seller","admin"),getGeminiResponse);
 
 

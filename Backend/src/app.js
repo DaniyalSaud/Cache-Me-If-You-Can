@@ -30,8 +30,6 @@ import adminRouter from "./routes/admin.routes.js";
 import toolRouter from "./routes/tools.routes.js";
 import loanRouter from "./routes/loan.routes.js";
 
-import sellerRouter from "./routes/seller.routes.js";
-
 
 /// ROUTES declaration
 
@@ -45,6 +43,9 @@ app.use("/api/v/admins",adminRouter);
 //_________________________________________________
 
 app.use("/api/v/tools",toolRouter);
+<<<<<<< HEAD
 app.use("/api/v/loans",loanRouter);
 app.use("/api/v/sellers",sellerRouter);
+=======
+>>>>>>> ec211837cdee718df16921851aeda57838c7a0f0
 export { app };

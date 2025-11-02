@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { 
-    getAllProducts,
-    getProductById,
-    createProduct,
-    updateProduct,
-    deleteProduct,
-    verifiyProduct
+import {
+  getAllProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  verifiyProduct,
+  getProducts,
 } from "../controllers/product.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -17,40 +18,35 @@ const router = Router();
 
 //TESTED SUCCESS
 router.route("/").get(getAllProducts);
+router.route("/").post(getProducts);
 
 //______________
 router.route("/search").get(getProductById); // Search by name functionality
 
-
 // Seller & Admin only routes
 
-router.route("/create").post(
+router
+  .route("/create")
+  .post(
     verifyJWT,
     authorizeRoles("seller", "admin"),
     upload.array("images", 12),
     createProduct
-);
+  );
 
 // TESTED SUCCESS
-router.route("/update/:id").patch(
-    verifyJWT,
-    authorizeRoles("seller", "admin"),
-    updateProduct
-);
+router
+  .route("/update/:id")
+  .patch(verifyJWT, authorizeRoles("seller", "admin"), updateProduct);
 
 // TESTED SUCCESS
-router.route("/delete/:id").delete(
-    verifyJWT,
-    authorizeRoles("seller", "admin"),
-    deleteProduct
-);
-
+router
+  .route("/delete/:id")
+  .delete(verifyJWT, authorizeRoles("seller", "admin"), deleteProduct);
 
 // Admin only routes
-router.route("/verify/:id").post(
-    verifyJWT,
-    authorizeRoles("admin"),
-    verifiyProduct
-);
+router
+  .route("/verify/:id")
+  .post(verifyJWT, authorizeRoles("admin"), verifiyProduct);
 
 export default router;

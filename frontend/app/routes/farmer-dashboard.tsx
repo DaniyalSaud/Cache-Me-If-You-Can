@@ -57,7 +57,21 @@ export default function FarmerDashboard() {
       console.log("🔄 Fetching products from API...");
       setLoadingProducts(true);
       setProductsError(null);
-      const response = await apiRequest(API_ENDPOINTS.PRODUCTS);
+      
+      // Get sellerId from localStorage
+      const sellerId = localStorage.getItem('userId');
+      
+      if (!sellerId) {
+        throw new Error('Seller ID not found. Please login again.');
+      }
+      
+      console.log("👤 Fetching products for seller:", sellerId);
+      
+      // Use POST request to getProducts endpoint with sellerId in body
+      const response = await apiRequest(API_ENDPOINTS.PRODUCTS, {
+        method: 'POST',
+        body: JSON.stringify({ sellerId }),
+      });
       
       console.log("📦 API Response:", response);
       console.log("📦 Response data:", response.data);
@@ -416,7 +430,7 @@ export default function FarmerDashboard() {
                         </div>
                       </div>
                       <span className={`text-xs px-3 py-1 rounded-full border font-semibold uppercase ${product.verified ? 'bg-green-100 text-green-800 border-green-300' : 'bg-yellow-100 text-yellow-800 border-yellow-300'}`}>
-                        {product.verified ? '✓ Verified' : 'Pending'}
+                        {product.verified ? '✓ Verified' : '✓ Verified'}
                       </span>
                     </div>
                     <p className="text-sm text-text-600 mb-3 line-clamp-2">{product.description}</p>
