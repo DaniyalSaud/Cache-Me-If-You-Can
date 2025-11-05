@@ -11,6 +11,7 @@ const waterconsumption = asyncHandler(async (req, res) => {
   const sellerid = req.user._id;
 
   const { watertype, croptype, area } = req.body;
+  console.log(waterRequired);
 
   if (!sellerid) {
     throw new APIError(400, "Seller ID is required");
