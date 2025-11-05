@@ -1,7 +1,14 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "build/client",
+  "installCommand": "npm install",
+  "functions": {
+    "api/index.js": {
+      "runtime": "nodejs18.x",
+      "handler": "build/server/index.js"
+    }
+  },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
+    { "source": "/(.*)", "destination": "/api/index.js" }
   ]
 }
