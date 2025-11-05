@@ -7,5 +7,5 @@ class ApiResponse {
     // status codes less than 400 are considered successful
   }
 }
-
+// Uppercased file name
 export { ApiResponse };
